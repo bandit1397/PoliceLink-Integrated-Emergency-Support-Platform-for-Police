@@ -324,6 +324,34 @@ const cp = G.createRequest(off, { type: 'patrol', urgency: '보통', summary: '�
 assert.strictEqual(view('42호').items.find((r) => r.requestId === cp.requestId).requesterName, '순경 이OO');
 console.log('ISOLATION OK');
 
+// 권역 (병원 응급실 · 통역원): 서울 4 · 경기 4 · 인천. 수신자 권역 비어 있으면 전체 구역, 요청 권역 안 고르면 전체
+{
+  const names = (type, o) => G.candidates(off, type, o).map((c) => c.name).sort().join();
+  assert.strictEqual(G.getConfig().regions.length, 9);
+  assert.strictEqual(names('interpreter', { language: '영어' }), '통역원 A (가상),통역원 D (가상)', 'no region = all');
+  assert.strictEqual(names('interpreter', { language: '영어', zone: '서울 동북권' }), '통역원 A (가상)');
+  assert.strictEqual(names('interpreter', { language: '영어', zone: '인천' }), '통역원 D (가상)');
+  assert.strictEqual(names('interpreter', { language: '몽골어', zone: '경기 북부' }), '통역원 C (가상)', 'C has no region = covers all');
+  assert.strictEqual(names('hospital', { zone: '서울 동남권' }), 'OO대학병원 응급실 (가상),OO시립병원 응급실 (가상)');
+  assert.strictEqual(names('hospital', { zone: '인천' }), 'OO시립병원 응급실 (가상)');
+  assert.strictEqual(names('hospital', { zone: '아무거나' }).split(',').length, 2, 'unknown zone = all');
+  // 요청에 저장되는 권역: 목록 밖 값이면 '' (전체)
+  const rq = G.createRequest(off, { type: 'hospital', urgency: '보통', zone: '인천', summary: '가상', targets: [byName('OO시립병원 응급실 (가상)').recipientId] });
+  assert.strictEqual(G.find_('REQUESTS', 'requestId', rq.requestId).zone, '인천');
+  const rq2 = G.createRequest(off, { type: 'hospital', urgency: '보통', zone: 'A구역', summary: '가상', targets: [byName('OO시립병원 응급실 (가상)').recipientId] });
+  assert.strictEqual(G.find_('REQUESTS', 'requestId', rq2.requestId).zone, '');
+  // 관리자: 권역은 목록에서만 (여러 개 쉼표 가능)
+  const hb = byName('OO시립병원 응급실 (가상)');
+  throws(() => G.saveRecipient(admin, Object.assign({}, hb, { zone: '부산' })), /권역은 목록에서/);
+  G.saveRecipient(admin, Object.assign({}, hb, { zone: '경기 북부,경기 동부' }));
+  assert.strictEqual(G.find_('RECIPIENTS', 'recipientId', hb.recipientId).zone, '경기 북부, 경기 동부');
+  assert.strictEqual(names('hospital', { zone: '경기 동부' }), 'OO시립병원 응급실 (가상)');
+  assert.strictEqual(names('hospital', { zone: '인천' }), '', 'no hospital for 인천 now');
+  G.saveRecipient(admin, Object.assign({}, hb, { zone: '' }));
+  // 순찰차 구역은 자유 입력 그대로
+  G.saveRecipient(admin, Object.assign({}, byName('41호'), { zone: 'A구역' }));
+}
+
 // 병원 응급실: 여러 곳 동시 문의 → 수용 가능/불가(사유) → 이송 결정(배정) → 환자 도착 → 인계 완료
 {
   const H1 = byName('OO대학병원 응급실 (가상)'), H2 = byName('OO시립병원 응급실 (가상)');

@@ -18,15 +18,18 @@ const CONFIG = {
   NTFY_SERVER: 'https://ntfy.sh',
   TYPES: {
     patrol:      { label: '순찰차 배치',   icon: '🚓', tag: 'police_car',         accept: '출동 가능', reject: '출동 불가', internal: true },
-    interpreter: { label: '통역원 호출',   icon: '🗣️', tag: 'speaking_head',      accept: '통역 가능', reject: '통역 불가' },
+    interpreter: { label: '통역원 호출',   icon: '🗣️', tag: 'speaking_head',      accept: '통역 가능', reject: '통역 불가', regional: true },
     finance:     { label: '금융기관 협조', icon: '🏦', tag: 'bank',               accept: '접수 확인', reject: '처리 불가' },
     agency:      { label: '유관기관 지원', icon: '🏛️', tag: 'classical_building', accept: '지원 가능', reject: '지원 불가' },
     // 병원 응급실: 여러 곳에 동시에 수용 가능 여부를 묻고, 수용 가능한 곳 중 하나로 이송 결정(= 배정)
-    hospital:    { label: '병원 응급실', icon: '🏥', tag: 'hospital', accept: '수용 가능', reject: '수용 불가',
+    hospital:    { label: '병원 응급실', icon: '🏥', tag: 'hospital', accept: '수용 가능', reject: '수용 불가', regional: true,
                    reasons: ['병상 없음', '전문의 부재', '장비 · 검사 불가', '기타'],
                    arrived: '환자 도착 · 진료 중', done: '인계 완료', assigned: '이송 확정 — 환자를 이송합니다. 앱에서 확인하세요.' },
   },
   URGENCY: ['긴급', '보통'],
+  // 권역 (regional: true 인 유형 = 병원 응급실 · 통역원). 수신자 권역이 비어 있으면 '전체 구역' 담당,
+  // 요청에서 권역을 고르지 않으면 전체 구역의 수신자가 대상.
+  REGIONS: ['서울 동북권', '서울 서북권', '서울 동남권', '서울 서남권', '경기 북부', '경기 동부', '경기 남부', '경기 서부', '인천'],
   PATROL_STATUS: ['가용', '출동중', '휴식'],
   LANGUAGES: ['영어', '중국어', '베트남어', '러시아어', '일본어', '태국어', '몽골어', '아랍어', '기타'],
   ROLES: { admin: '관리자', dispatcher: '상황관리자', officer: '현장 경찰관' },
@@ -73,6 +76,7 @@ function getConfig() {
     urgency: CONFIG.URGENCY,
     patrolStatus: CONFIG.PATROL_STATUS,
     languages: CONFIG.LANGUAGES,
+    regions: CONFIG.REGIONS,
     roles: CONFIG.ROLES,
     realertMin: CONFIG.REALERT_MIN,
     ready: !!PropertiesService.getScriptProperties().getProperty(SHEET_ID_KEY),
@@ -198,6 +202,10 @@ function candidates(token, type, opts) {
   if (type === 'interpreter' && opts.language) {
     list = list.filter((x) => splitList_(x.detail).indexOf(opts.language) >= 0);
   }
+  if (CONFIG.TYPES[type].regional) {
+    const zone = regionOf_(opts.zone);
+    if (zone) list = list.filter((x) => !x.zone || splitIds_(x.zone).indexOf(zone) >= 0);   // 권역 없는 수신자 = 전체 구역
+  }
   return list.map((x) => ({
     recipientId: x.recipientId, name: x.name, org: x.org, detail: x.detail, zone: x.zone,
     status: x.status, recommended: type === 'interpreter' || type === 'hospital', reason: '',
@@ -251,7 +259,7 @@ function createRequest(token, data) {
     type: type,
     urgency: CONFIG.URGENCY.indexOf(data.urgency) >= 0 ? data.urgency : '보통',
     location: clean_(data.location, 100),
-    zone: clean_(data.zone, 30),
+    zone: CONFIG.TYPES[type].regional ? regionOf_(data.zone) : clean_(data.zone, 30),
     language: type === 'interpreter' ? clean_(data.language, 20) : '',
     summary: summary,
     detail: clean_(data.detail, 500),
@@ -463,13 +471,20 @@ function saveRecipient(token, data) {
     name: clean_(data.name, 40),
     org: clean_(data.org, 40),
     detail: clean_(data.detail, 100),
-    zone: clean_(data.zone, 30),
+    zone: clean_(data.zone, 60),
     contact: clean_(data.contact, 30),
     status: type === 'patrol' ? (CONFIG.PATROL_STATUS.indexOf(data.status) >= 0 ? data.status : '가용') : '',
     active: data.active === 'N' ? 'N' : 'Y',
   };
   if (!patch.name) throw new Error('이름을 입력하세요.');
   let id = clean_(data.recipientId, 20);
+  const old = id && find_('RECIPIENTS', 'recipientId', id);
+  if (CONFIG.TYPES[old ? old.type : type].regional && patch.zone) {
+    // 권역은 목록에 있는 이름만 (쉼표로 여러 개 가능). 비우면 전체 구역
+    const zs = splitIds_(patch.zone);
+    if (zs.some((z) => !regionOf_(z))) throw new Error('권역은 목록에서 고르세요: ' + CONFIG.REGIONS.join(', '));
+    patch.zone = zs.join(', ');
+  }
   withLock_(() => {
     const r = id && find_('RECIPIENTS', 'recipientId', id);
     if (r) {
@@ -681,16 +696,16 @@ function setupDemo() {
       ['patrol', '41호', 'OO지구대 1팀', '순찰차 · 2인', 'A구역', '가용'],
       ['patrol', '42호', 'OO지구대 2팀', '순찰차 · 2인', 'B구역', '가용'],
       ['patrol', '43호', 'OO지구대 3팀', '순찰차 · 2인', 'A구역', '출동중'],
-      ['interpreter', '통역원 A (가상)', '외국인 통역 인력풀', '영어, 중국어', '', ''],
-      ['interpreter', '통역원 B (가상)', '외국인 통역 인력풀', '베트남어', '', ''],
+      ['interpreter', '통역원 A (가상)', '외국인 통역 인력풀', '영어, 중국어', '서울 동북권', ''],
+      ['interpreter', '통역원 B (가상)', '외국인 통역 인력풀', '베트남어', '경기 남부', ''],
       ['interpreter', '통역원 C (가상)', '외국인 통역 인력풀', '러시아어, 몽골어', '', ''],
-      ['interpreter', '통역원 D (가상)', '외국인 통역 인력풀', '영어, 일본어', '', ''],
+      ['interpreter', '통역원 D (가상)', '외국인 통역 인력풀', '영어, 일본어', '인천', ''],
       ['finance', '가상은행 협조창구', '가상은행 금융사고대응팀', '공식 협조 창구 (가상)', '', ''],
       ['finance', '샘플저축은행 협조창구', '샘플저축은행 준법지원부', '공식 협조 창구 (가상)', '', ''],
       ['agency', '소방 상황실 (가상)', 'OO소방서', '구조 · 구급', '', ''],
       ['agency', '구청 당직실 (가상)', 'OO구청', '행정 지원', '', ''],
       ['agency', '정신건강복지센터 (가상)', 'OO구 정신건강복지센터', '위기 개입', '', ''],
-      ['hospital', 'OO대학병원 응급실 (가상)', 'OO대학병원', '권역응급의료센터', '', ''],
+      ['hospital', 'OO대학병원 응급실 (가상)', 'OO대학병원', '권역응급의료센터', '서울 동남권', ''],
       ['hospital', 'OO시립병원 응급실 (가상)', 'OO시립병원', '지역응급의료기관', '', ''],
     ];
     demo.forEach((d) => {
@@ -936,6 +951,12 @@ function indexBy_(list, field) {
 
 function splitIds_(s) {
   return String(s || '').split(',').map((x) => x.trim()).filter(Boolean);
+}
+
+/** 권역 이름이면 그대로, 아니면 '' (= 전체 구역) */
+function regionOf_(s) {
+  s = String(s || '').trim();
+  return CONFIG.REGIONS.indexOf(s) >= 0 ? s : '';
 }
 
 function splitList_(s) {

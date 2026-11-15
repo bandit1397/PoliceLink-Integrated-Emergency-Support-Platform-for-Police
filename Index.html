@@ -165,7 +165,8 @@
       <div class="chips urg" id="nUrg"></div>
       <div class="grid2">
         <div><label class="f">위치 (대략적인 장소)</label><input type="text" id="nLoc" maxlength="100" placeholder="예: OO역 2번 출구 앞"></div>
-        <div><label class="f">관할 구역</label><input type="text" id="nZone" maxlength="30" list="zoneList" placeholder="예: A구역"><datalist id="zoneList"></datalist></div>
+        <div><label class="f">관할 구역</label><input type="text" id="nZone" maxlength="30" list="zoneList" placeholder="예: A구역"><datalist id="zoneList"></datalist>
+          <select id="nRegion" class="hidden"></select></div>
       </div>
       <div id="nLangBox" class="hidden">
         <label class="f">필요 언어</label>
@@ -219,6 +220,7 @@
           <div><label class="f">소속 기관</label><input type="text" id="rcOrg"></div>
           <div><label class="f" id="rcDetailLabel">상세</label><input type="text" id="rcDetail"></div>
           <div class="rc-patrol"><label class="f">담당 구역</label><input type="text" id="rcZone" placeholder="예: A구역"></div>
+          <div class="rc-region"><label class="f">담당 권역</label><select id="rcRegion"></select></div>
           <div><label class="f">연락처 (관리자만 보임)</label><input type="tel" id="rcContact"></div>
           <div class="rc-patrol"><label class="f">상태</label><select id="rcStatus"></select></div>
           <div><label class="f">사용</label><select id="rcActive"><option value="Y">사용</option><option value="N">일시 중지</option></select></div>
@@ -562,6 +564,8 @@ function setupNewForm() {
   chips($('nType'), 'nType', types, 'radio', [load('pl_last_type', 'patrol')]);
   chips($('nUrg'), 'nUrg', cfg.urgency, 'radio', ['긴급']);
   options($('nLang'), cfg.languages.map((l) => [l, l]));
+  options($('nRegion'), [['', '전체 구역 (지정 안 함)']].concat(cfg.regions.map((z) => [z, z])));
+  $('nRegion').onchange = loadCandidates;
   $('nCall').value = load('pl_callback', '');
   document.querySelectorAll('input[name="nType"]').forEach((i) => (i.onchange = loadCandidates));
   document.querySelectorAll('input[name="nUrg"]').forEach((i) => (i.onchange = loadCandidates));
@@ -577,30 +581,35 @@ const SUM_HINT = {
   agency: '예: 자해 우려자 위기 개입 지원 요청',
   hospital: '예: 50대 남성 · 의식 저하 · 호흡 있음 · 보호자 없음 (이름 · 주민번호 쓰지 말 것)',
 };
+function isRegional(type) { return !!(cfg.types[type] || {}).regional; }
+function zoneValue(type) { return isRegional(type) ? $('nRegion').value : $('nZone').value; }
 let candSeq = 0;
 async function loadCandidates() {
   const type = checked('nType')[0];
   $('nLangBox').classList.toggle('hidden', type !== 'interpreter');
+  const regional = isRegional(type);   // 병원 응급실 · 통역원: 권역 목록에서 고름 (안 고르면 전체 구역)
+  $('nZone').classList.toggle('hidden', regional);
+  $('nRegion').classList.toggle('hidden', !regional);
   $('nSum').placeholder = SUM_HINT[type] || SUM_HINT.interpreter;
   const seq = ++candSeq;
   $('nCands').innerHTML = '<p class="muted">대상 불러오는 중…</p>';
   try {
-    const list = await call('candidates', token, type, { zone: $('nZone').value, urgency: checked('nUrg')[0], language: $('nLang').value });
+    const list = await call('candidates', token, type, { zone: zoneValue(type), urgency: checked('nUrg')[0], language: $('nLang').value });
     if (seq !== candSeq) return;
     $('nCandInfo').textContent = type === 'patrol' ? '(가용 · 담당 구역 · 진행 임무 기준 추천 — 최종 배정은 상황관리자가 결정)'
-      : type === 'interpreter' ? '(선택한 언어 가능 통역원 일괄 호출)'
-      : type === 'hospital' ? '(여러 응급실에 동시에 수용 가능 여부 문의 → 수용 가능한 곳 중 하나로 이송 결정)' : '';
+      : type === 'interpreter' ? '(선택한 언어 · 권역의 통역원 일괄 호출. 권역을 안 고르면 전체 구역)'
+      : type === 'hospital' ? '(선택한 권역 응급실에 동시에 수용 가능 여부 문의 → 수용 가능한 곳 중 하나로 이송 결정. 권역을 안 고르면 전체 구역)' : '';
     $('nCands').innerHTML = list.map((c) => `
       <label class="cand"><input type="checkbox" name="nCand" value="${esc(c.recipientId)}"${c.recommended ? ' checked' : ''}>
         <span><b>${esc(c.name)}</b>${c.recommended && type === 'patrol' ? '<span class="badge">추천</span>' : ''}
-        <br><span class="muted">${esc(c.org)}${c.detail ? ' · ' + esc(c.detail) : ''}${c.zone ? ' · ' + esc(c.zone) : ''}${c.reason ? ' — ' + esc(c.reason) : ''}</span></span></label>`).join('')
+        <br><span class="muted">${esc(c.org)}${c.detail ? ' · ' + esc(c.detail) : ''}${c.zone ? ' · ' + esc(c.zone) : regional ? ' · 전체 구역' : ''}${c.reason ? ' — ' + esc(c.reason) : ''}</span></span></label>`).join('')
       || '<p class="muted">해당하는 대상이 없습니다. 관리자 화면에서 수신자를 등록하세요.</p>';
   } catch (e) { if (!handleAuthError(e)) $('nCands').innerHTML = '<p class="muted">' + esc(errMsg(e)) + '</p>'; }
 }
 
 $('btnSend').onclick = async () => {
   const data = {
-    type: checked('nType')[0], urgency: checked('nUrg')[0], location: $('nLoc').value, zone: $('nZone').value,
+    type: checked('nType')[0], urgency: checked('nUrg')[0], location: $('nLoc').value, zone: zoneValue(checked('nType')[0]),
     language: $('nLang').value, summary: $('nSum').value, detail: $('nDetail').value, callback: $('nCall').value,
     targets: checked('nCand'),
   };
@@ -623,7 +632,7 @@ let rFilter = 'all';
 async function loadRecipients() {
   try {
     recips = await call('listRecipients', token);
-    const zones = [...new Set(recips.filter((x) => x.zone).map((x) => x.zone))];
+    const zones = [...new Set(recips.filter((x) => x.zone && !isRegional(x.type)).map((x) => x.zone))];
     $('zoneList').innerHTML = zones.map((z) => `<option value="${esc(z)}">`).join('');
     renderRecipients();
     if (me.role === 'admin') renderRcTable();
@@ -714,7 +723,7 @@ function renderRcTable() {
       ${list.map((x) => `<tr${x.active === 'Y' ? '' : ' style="opacity:.55"'}>
         <td><b>${x.seq}</b><br><span class="muted">${esc(x.recipientId)}</span></td>
         <td><b>${esc(x.name)}</b>${x.active === 'Y' ? '' : ' <span class="tag">일시 중지</span>'}<br>
-          <span class="muted">${esc(x.org)}${x.detail ? ' · ' + esc(x.detail) : ''}${x.zone ? ' · ' + esc(x.zone) : ''}${x.status ? ' · ' + esc(x.status) : ''}</span></td>
+          <span class="muted">${esc(x.org)}${x.detail ? ' · ' + esc(x.detail) : ''}${x.zone ? ' · ' + esc(x.zone) : isRegional(x.type) ? ' · 전체 구역' : ''}${x.status ? ' · ' + esc(x.status) : ''}</span></td>
         <td style="min-width:200px"><input type="text" readonly value="${esc(x.link)}" onclick="this.select()" style="font-size:12px;padding:6px">
           <button class="btn-sm btn-line" data-rccopy="${esc(x.recipientId)}" style="margin-top:4px">복사</button></td>
         <td style="white-space:nowrap"><button class="btn-sm btn-line" data-rcedit="${esc(x.recipientId)}">수정</button>
@@ -734,9 +743,13 @@ function fillRc(x, type, seq) {
   $('rcOrg').value = x ? x.org : ''; $('rcDetail').value = x ? x.detail : '';
   $('rcDetailLabel').textContent = RC_DETAIL[type][0]; $('rcDetail').placeholder = RC_DETAIL[type][1];
   $('rcZone').value = x ? x.zone : ''; $('rcContact').value = x ? x.contact : '';
+  const rz = x && x.zone && !cfg.regions.includes(x.zone) ? [[x.zone, x.zone]] : [];   // 여러 권역 등 목록 밖 값도 보존
+  options($('rcRegion'), [['', '전체 구역']].concat(rz, cfg.regions.map((z) => [z, z])));
+  $('rcRegion').value = x ? x.zone : '';
   $('rcStatus').value = x && x.status ? x.status : '가용';
   $('rcActive').value = x ? x.active : 'Y';
   document.querySelectorAll('.rc-patrol').forEach((el) => el.classList.toggle('hidden', type !== 'patrol'));
+  document.querySelectorAll('.rc-region').forEach((el) => el.classList.toggle('hidden', !isRegional(type)));
   $('rcForm').scrollIntoView({ behavior: 'smooth' });
 }
 function showLink(x) {
@@ -755,7 +768,7 @@ $('btnRcSave').onclick = async () => {
   const b = $('btnRcSave'); b.disabled = true;
   try {
     const r = await call('saveRecipient', token, { recipientId: $('rcId').value, type: $('rcType').value, name: $('rcName').value, org: $('rcOrg').value,
-      detail: $('rcDetail').value, zone: $('rcZone').value, contact: $('rcContact').value, status: $('rcStatus').value, active: $('rcActive').value });
+      detail: $('rcDetail').value, zone: isRegional($('rcType').value) ? $('rcRegion').value : $('rcZone').value, contact: $('rcContact').value, status: $('rcStatus').value, active: $('rcActive').value });
     await loadRecipients();
     const x = recips.find((y) => y.recipientId === r.recipientId);
     toast(`${x ? x.name : r.recipientId} 저장했습니다.`);
