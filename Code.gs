@@ -420,12 +420,16 @@ function recipientView(rtoken) {
   const me = recipientAuth_(rtoken);
   const now = Date.now();
   const latest = latestResponses_();
+  const internal = !!CONFIG.TYPES[me.type].internal;
+  const orgs = internal ? {} : orgsByUser_();
   const items = rows_('REQUESTS')
     .filter((r) => splitIds_(r.targets).indexOf(me.recipientId) >= 0)
     .filter((r) => r.status === 'open' || r.assignedTo === me.recipientId || !!latest[r.requestId + '|' + me.recipientId])
     .filter((r) => isActive_(r) || now - r.updatedAt < CONFIG.LIST_HOURS * 3600000)
     .map((r) => {
-      const o = publicRequest_(r, !!CONFIG.TYPES[me.type].internal);
+      const o = publicRequest_(r, internal);
+      // 외부 기관에는 요청 경찰관 이름 대신 소속만 (최소정보)
+      if (!internal) o.requesterName = orgs[r.requesterId] || '경찰';
       const mine = latest[r.requestId + '|' + me.recipientId];
       o.mine = mine ? { status: mine.status, at: mine.at } : null;
       o.assignedToMe = r.assignedTo === me.recipientId;
@@ -624,6 +628,13 @@ function publicRequest_(r, withDetail) {
   };
   if (withDetail) { o.detail = r.detail; o.requesterId = r.requesterId; }
   return o;
+}
+
+/** 직원 아이디 → 소속 (외부 기관 화면에 이름 대신 표시) */
+function orgsByUser_() {
+  const m = {};
+  rows_('USERS').forEach((u) => (m[u.userId] = u.org));
+  return m;
 }
 
 /** '요청|수신자' → 가장 최근 응답 */

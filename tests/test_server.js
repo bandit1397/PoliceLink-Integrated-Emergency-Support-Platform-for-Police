@@ -253,6 +253,11 @@ throws(() => G.recipientRespond(byName('가상은행 협조창구').token, sent.
 throws(() => G.recipientRespond(byName('구청 당직실 (가상)').token, sent.finance, 'accept'), /찾을 수 없/);
 // 수신자 토큰으로 직원 기능 불가
 throws(() => G.dashboard(byName('통역원 A (가상)').token), /SESSION_EXPIRED/);
+// 외부 기관: 요청자 이름 대신 소속 / 순찰차(내부): 이름
+assert.strictEqual(view('통역원 A (가상)').items[0].requesterName, 'OO경찰서 112상황실');
+assert(!JSON.stringify(view('가상은행 협조창구')).includes('상황관리 김OO'), 'no officer name to bank');
+const cp = G.createRequest(off, { type: 'patrol', urgency: '보통', summary: '가상 순찰 지원', targets: [byName('42호').recipientId] });
+assert.strictEqual(view('42호').items.find((r) => r.requestId === cp.requestId).requesterName, '순경 이OO');
 console.log('ISOLATION OK');
 
 G.clearRequests();
