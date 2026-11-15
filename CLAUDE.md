@@ -12,7 +12,7 @@
 | 기반 프로젝트 | `Desktop/emergency-ntfy` (환자 수용 요청). **수정하지 말 것** — 참고 · 복사만. 휴대폰/ntfy 지식은 그 폴더 CLAUDE.md 에 많음 |
 | Apps Script 프로젝트 "PoliceLink" | https://script.google.com/home/projects/1OhwTR9Aja90AILQ3bISaVO-mgcL43OoWEa50YnFzCeA8fsjsLi-_5rg9/edit |
 | 웹앱 (/exec, 배포 ID 고정) | https://script.google.com/macros/s/AKfycbx7UhxhjwnyxErO3oBARbPh4dgB-CpDJA8Hz4k2uaULFHXmWIHvQ-GNZA8O6kiwEwUcIg/exec |
-| 비밀값 (git 제외) | `accounts.local.txt` — 직원 3명 PIN(admin 은 사용자가 정한 값) · 데이터 시트 주소 · 수신자 12곳 개인 링크(통역원 5 는 아직 없음) |
+| 비밀값 (git 제외) | `accounts.local.txt` — 직원 3명 PIN(admin 은 사용자가 정한 값) · 데이터 시트 주소 · 수신자 13곳 개인 링크 (통역원 5 포함) |
 | 시험 휴대폰 | 갤럭시 A90 (SM-A908N · 안드로이드 12 · ntfy 1.25.2), USB 로 연결해서 adb 사용 |
 
 ## 핵심 구조
