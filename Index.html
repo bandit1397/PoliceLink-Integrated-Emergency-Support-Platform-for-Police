@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<style>
+  :root {
+    --bg: #f3f5f8; --card: #fff; --text: #1b1f24; --muted: #667085; --line: #e1e5eb;
+    --blue: #1f5fd1; --green: #138a4a; --red: #c8322b; --amber: #b86e00; --navy: #10213f;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.45 -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif; }
+  header { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 8px;
+    padding: 12px 16px; background: var(--navy); color: #fff; }
+  header h1 { flex: 1; margin: 0; font-size: 18px; }
+  header .who { font-size: 13px; opacity: .85; text-align: right; }
+  nav { position: sticky; top: 50px; z-index: 4; display: flex; gap: 4px; overflow-x: auto; padding: 8px 12px;
+    background: #fff; border-bottom: 1px solid var(--line); }
+  nav button { flex: 0 0 auto; padding: 8px 14px; background: transparent; color: var(--muted); border-radius: 8px; }
+  nav button.on { background: #eaf1fd; color: var(--blue); }
+  main { max-width: 900px; margin: 0 auto; padding: 16px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+  h2 { margin: 0 0 12px; font-size: 17px; }
+  h3 { margin: 16px 0 8px; font-size: 15px; }
+  label.f { display: block; margin: 12px 0 6px; font-weight: 600; font-size: 14px; }
+  input[type=text], input[type=tel], input[type=password], select, textarea {
+    width: 100%; padding: 11px; font: inherit; border: 1px solid #c9d0da; border-radius: 8px; background: #fff; }
+  textarea { min-height: 64px; resize: vertical; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chips input { position: absolute; opacity: 0; pointer-events: none; }
+  .chips span { display: inline-block; padding: 9px 14px; border: 1px solid #c9d0da; border-radius: 999px; background: #fff; cursor: pointer; }
+  .chips input:checked + span { background: var(--blue); border-color: var(--blue); color: #fff; }
+  .chips.urg input[value="긴급"]:checked + span { background: var(--red); border-color: var(--red); }
+  button { font: inherit; border: 0; border-radius: 10px; padding: 11px 16px; cursor: pointer; font-weight: 700; }
+  button:disabled { opacity: .5; cursor: default; }
+  .btn-main { width: 100%; margin-top: 16px; padding: 15px; font-size: 17px; background: var(--blue); color: #fff; }
+  .btn-ghost { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.5); padding: 6px 10px; font-size: 13px; }
+  .btn-line { background: #fff; color: var(--text); border: 1px solid #c9d0da; }
+  .btn-sm { padding: 7px 10px; font-size: 13px; border-radius: 8px; }
+  .b-green { background: var(--green); color: #fff; } .b-red { background: var(--red); color: #fff; }
+  .b-amber { background: var(--amber); color: #fff; } .b-blue { background: var(--blue); color: #fff; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .warn { background: #fff6e5; border: 1px solid #f2d39b; color: #7a4a00; border-radius: 8px; padding: 10px 12px; font-size: 13px; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
+  .stat { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 10px; text-align: center; }
+  .stat b { display: block; font-size: 24px; } .stat span { font-size: 12px; color: var(--muted); }
+  .stat.red b { color: var(--red); }
+  .req-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .req-id { font-weight: 800; font-size: 16px; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 13px; font-weight: 700; background: #eef1f5; margin: 2px 4px 2px 0; }
+  .tag.urgent { background: var(--red); color: #fff; }
+  .tag.open { background: #fff1d6; color: var(--amber); } .tag.assigned { background: #e3edff; color: var(--blue); }
+  .tag.done { background: #e3f5ea; color: var(--green); } .tag.cancelled { background: #eef1f5; color: var(--muted); }
+  .card.urgent { border-left: 5px solid var(--red); }
+  .card.closed { opacity: .7; }
+  .sum { margin: 8px 0 4px; white-space: pre-wrap; font-weight: 600; }
+  .detail { margin: 4px 0; white-space: pre-wrap; font-size: 14px; background: #f6f7f9; border-radius: 6px; padding: 6px 8px; }
+  .resp { display: flex; align-items: center; gap: 8px; padding: 9px 0; border-top: 1px solid var(--line); flex-wrap: wrap; }
+  .resp .name { flex: 1; min-width: 140px; font-weight: 600; }
+  .st { font-weight: 800; font-size: 14px; }
+  .st.accept { color: var(--green); } .st.reject { color: var(--red); } .st.none { color: var(--muted); }
+  .st.arrived { color: var(--blue); } .st.done { color: var(--green); }
+  .row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .row > * { flex: 1; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+  .actions button { padding: 14px 4px; }
+  .banner { padding: 10px 12px; border-radius: 8px; font-weight: 700; margin-top: 10px; }
+  .banner.ok { background: #e3f5ea; color: var(--green); } .banner.info { background: #eef1f5; color: var(--muted); }
+  .banner.blue { background: #e3edff; color: var(--blue); }
+  .cand { display: flex; gap: 10px; align-items: flex-start; padding: 10px; border: 1px solid var(--line); border-radius: 10px; margin-bottom: 8px; cursor: pointer; }
+  .cand input { margin-top: 4px; width: 18px; height: 18px; }
+  .cand .badge { background: var(--green); color: #fff; border-radius: 6px; font-size: 12px; padding: 1px 6px; margin-left: 4px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 7px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; color: var(--muted); }
+  .scroll { overflow-x: auto; }
+  .pin { font: 700 22px/1.3 monospace; letter-spacing: 3px; background: #fff6e5; padding: 8px 12px; border-radius: 8px; }
+  a.tel { color: var(--blue); font-weight: 700; }
+  .alarm { cursor: pointer; position: sticky; top: 52px; z-index: 4; margin-bottom: 14px; padding: 14px; border-radius: 10px;
+    background: var(--red); color: #fff; font-weight: 800; text-align: center; animation: blink 1s step-end infinite; }
+  @keyframes blink { 50% { background: #7a1410; } }
+  .card.pending { border: 2px solid var(--red); }
+  .new { animation: flash 1s ease 3; }
+  @keyframes flash { 50% { box-shadow: 0 0 0 4px #f5b301; } }
+  .steps { padding-left: 20px; margin: 0 0 8px; } .steps li { margin-bottom: 8px; }
+  #toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: #1b1f24; color: #fff;
+    padding: 10px 16px; border-radius: 8px; font-size: 14px; display: none; z-index: 10; max-width: 90%; }
+  .hidden { display: none !important; }
+  @media (max-width: 560px) { .stats { grid-template-columns: repeat(2, 1fr); } .grid2 { grid-template-columns: 1fr; } main { padding: 12px; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>🚨 PoliceLink</h1>
+  <span class="who" id="who"></span>
+  <button class="btn-ghost hidden" id="btnLogout">로그아웃</button>
+</header>
+<nav id="nav" class="hidden">
+  <button data-tab="board" class="on">📋 상황판</button>
+  <button data-tab="new">➕ 신규 요청</button>
+  <button data-tab="recips">👥 수신자</button>
+  <button data-tab="admin" class="hidden" id="navAdmin">⚙ 관리자</button>
+</nav>
+
+<main>
+  <p class="muted" id="boot">불러오는 중…</p>
+
+  <!-- 직원 로그인 -->
+  <section id="login" class="hidden">
+    <div class="card">
+      <h2>직원 로그인</h2>
+      <label class="f">아이디</label>
+      <input type="text" id="lId" autocomplete="username" autocapitalize="off">
+      <label class="f">PIN</label>
+      <input type="password" id="lPin" inputmode="numeric" autocomplete="current-password">
+      <button class="btn-main" id="btnLogin">로그인</button>
+      <p class="muted">통역원 · 금융기관 · 유관기관 · 순찰차 단말은 관리자에게 받은 <b>개인 링크</b>로 접속합니다 (로그인 불필요).</p>
+      <p class="warn">⚠ 기능 검증용 시험판입니다. <b>가상 데이터만</b> 입력하세요. 실제 사건 내용 · 이름 · 주민번호 · 계좌번호 · 연락처 입력 금지.</p>
+    </div>
+  </section>
+
+  <!-- ===== 직원 ===== -->
+  <section id="tab-board" class="hidden">
+    <div class="stats">
+      <div class="stat red"><b id="sOpen">0</b><span>응답 대기</span></div>
+      <div class="stat"><b id="sAssigned">0</b><span>배정 · 처리 중</span></div>
+      <div class="stat red"><b id="sUrgent">0</b><span>긴급 진행</span></div>
+      <div class="stat"><b id="sDone">0</b><span>완료 (24시간)</span></div>
+    </div>
+    <div class="card hidden" id="patrolBar"></div>
+    <p class="muted" id="realertInfo"></p>
+    <div id="bList"></div>
+  </section>
+
+  <section id="tab-new" class="hidden">
+    <div class="card">
+      <h2>신규 지원 요청</h2>
+      <label class="f">요청 유형</label>
+      <div class="chips" id="nType"></div>
+      <label class="f">긴급도</label>
+      <div class="chips urg" id="nUrg"></div>
+      <div class="grid2">
+        <div><label class="f">위치 (대략적인 장소)</label><input type="text" id="nLoc" maxlength="100" placeholder="예: OO역 2번 출구 앞"></div>
+        <div><label class="f">관할 구역</label><input type="text" id="nZone" maxlength="30" list="zoneList" placeholder="예: A구역"><datalist id="zoneList"></datalist></div>
+      </div>
+      <div id="nLangBox" class="hidden">
+        <label class="f">필요 언어</label>
+        <select id="nLang"></select>
+      </div>
+      <label class="f">요청 내용 — 수신자(외부 기관 포함)에게 보임</label>
+      <textarea id="nSum" maxlength="200" placeholder="예: 외국인 교통사고 당사자 진술 통역 필요 (현장 · 약 30분)"></textarea>
+      <label class="f">내부 메모 — 경찰 내부(직원 · 순찰차)만 보임</label>
+      <textarea id="nDetail" maxlength="500" placeholder="사건 처리용 내부 메모 (시험판: 가상 내용만)"></textarea>
+      <label class="f">회신 연락처 (상황실 · 지구대 대표번호)</label>
+      <input type="tel" id="nCall" maxlength="30" placeholder="예: 02-000-0000">
+      <label class="f">알림 대상 <span class="muted" id="nCandInfo"></span></label>
+      <div id="nCands"></div>
+      <button class="btn-main" id="btnSend">📣 선택한 대상에게 요청 보내기</button>
+      <p class="muted">알림(ntfy)에는 요청번호 · 유형 · 긴급도만 담깁니다. 내용은 수신자가 PoliceLink 를 열어야 보입니다.</p>
+    </div>
+  </section>
+
+  <section id="tab-recips" class="hidden">
+    <div class="chips" id="rFilter" style="margin-bottom:12px"></div>
+    <div id="rList"></div>
+  </section>
+
+  <section id="tab-admin" class="hidden">
+    <div class="chips" id="aTabs" style="margin-bottom:12px"></div>
+
+    <div id="a-users">
+      <div class="card">
+        <h2>직원 계정 추가 · 수정</h2>
+        <div class="grid2">
+          <div><label class="f">아이디 (영문 소문자 · 숫자)</label><input type="text" id="uId" autocapitalize="off"></div>
+          <div><label class="f">이름</label><input type="text" id="uName"></div>
+          <div><label class="f">소속</label><input type="text" id="uOrg"></div>
+          <div><label class="f">역할</label><select id="uRole"></select></div>
+          <div><label class="f">사용</label><select id="uActive"><option value="Y">사용</option><option value="N">중지</option></select></div>
+        </div>
+        <div class="row"><button class="b-blue" id="btnUserSave">저장 (새 계정이면 PIN 발급)</button><button class="btn-line" id="btnUserClear">새로 입력</button></div>
+        <div id="uPinBox" class="hidden" style="margin-top:12px"></div>
+      </div>
+      <div class="card scroll"><table id="uTable"></table></div>
+    </div>
+
+    <div id="a-recips" class="hidden">
+      <div class="card">
+        <h2>수신자 추가 · 수정</h2>
+        <input type="hidden" id="rcId">
+        <div class="grid2">
+          <div><label class="f">유형</label><select id="rcType"></select></div>
+          <div><label class="f">이름 (예: 41호 · 통역원 A)</label><input type="text" id="rcName"></div>
+          <div><label class="f">소속 기관</label><input type="text" id="rcOrg"></div>
+          <div><label class="f">상세 (통역원: 언어를 쉼표로)</label><input type="text" id="rcDetail" placeholder="예: 영어, 중국어"></div>
+          <div><label class="f">담당 구역 (순찰차)</label><input type="text" id="rcZone"></div>
+          <div><label class="f">연락처 (관리자만 보임)</label><input type="tel" id="rcContact"></div>
+          <div><label class="f">상태 (순찰차)</label><select id="rcStatus"></select></div>
+          <div><label class="f">사용</label><select id="rcActive"><option value="Y">사용</option><option value="N">중지</option></select></div>
+        </div>
+        <div class="row"><button class="b-blue" id="btnRcSave">저장</button><button class="btn-line" id="btnRcClear">새로 입력</button></div>
+        <div id="rcLinkBox" class="hidden" style="margin-top:12px"></div>
+      </div>
+      <div class="card scroll"><table id="rcTable"></table></div>
+    </div>
+
+    <div id="a-audit" class="hidden">
+      <div class="card scroll">
+        <div class="row" style="margin-top:0"><button class="btn-line" id="btnAudit">감사기록 새로고침 (최근 200건)</button></div>
+        <table id="auTable"></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 수신자 (개인 링크) ===== -->
+  <section id="recipient" class="hidden">
+    <div class="alarm hidden" id="rAlarm"></div>
+    <div class="card hidden" id="rPush">
+      <h2>📱 화면이 꺼져도 알림 받기 (최초 1회)</h2>
+      <ol class="steps">
+        <li>Play 스토어에서 <a class="tel" href="https://play.google.com/store/apps/details?id=io.heckel.ntfy" target="_blank">ntfy 앱</a>을 설치합니다 (무료, 회원가입 없음).</li>
+        <li>이 휴대폰에서 아래 버튼을 눌러 구독합니다 (ntfy 앱이 열리면 구독 완료).
+          <div class="row"><a class="btn-line" id="rSubscribe" target="_blank"
+            style="text-align:center;text-decoration:none;padding:12px;border-radius:10px;font-weight:700">🔔 내 알림 구독</a></div></li>
+        <li>ntfy 구독 설정 → <b>즉시 전달(Instant delivery)</b> 켜기 · <b>배터리 최적화</b> 해제.</li>
+        <li>ntfy 설정 → <b>Keep alerting for highest priority</b> 켜기 (긴급 요청은 누를 때까지 계속 울림).</li>
+      </ol>
+      <p><b>🔕 알람 끄기:</b> 알림을 <b>누르면</b> 알람이 멈추고 ntfy 화면이 열립니다 → <b>PoliceLink 열기</b> 버튼으로 이 화면에 옵니다.
+        이 화면의 빨간 배너나 응답 버튼을 눌러도 알람이 멈춥니다 (ntfy 화면이 잠깐 열림 → 뒤로 가기).</p>
+      <p class="muted">이 구독 주소는 <b>나에게만</b> 오는 알림입니다. 다른 사람에게 알려 주지 마세요. 알림에는 요청번호 · 유형 · 긴급도만 담깁니다.</p>
+      <p class="muted" id="rTopic"></p>
+      <button class="btn-line" id="btnPushDone">확인 — 이 안내 숨기기</button>
+    </div>
+    <div class="card hidden" id="rPatrol">
+      <h2>🚓 내 상태</h2>
+      <div class="row" id="rPatrolBtns"></div>
+    </div>
+    <p class="muted" id="rInfo"></p>
+    <p class="muted"><a class="tel" href="#" id="lnkPush">📱 화면 꺼짐 알림 설정 보기</a></p>
+    <div id="rReqs"></div>
+  </section>
+</main>
+
+<div id="toast"></div>
+
+<script>
+const POLL_MS = 5000;
+const REALERT_CHECK_MS = 60000;
+const RING_MS = 3000;
+const IS_ANDROID = /Android/i.test(navigator.userAgent);
+const STATUS_LABEL = { open: '응답 대기', assigned: '배정 · 처리 중', done: '처리 완료', cancelled: '취소' };
+
+let cfg = null;
+let token = load('pl_token', '');      // 직원 세션
+let rtoken = load('pl_rtoken', '');    // 수신자 개인 링크 토큰
+let me = null;
+let mode = '';                       // 'staff' | 'recipient'
+let tab = 'board';
+let pollTimer = null, realertTimer = null, polling = false;
+let seen = null;
+let audioCtx = null;
+let recips = [];
+let ringTimer = null, pendingIds = [], silenced = [];
+let ntfyLink = '';
+let ntfyQuiet = load('pl_ntfy_quiet', []);
+
+const $ = (id) => document.getElementById(id);
+
+/* ---------- 공통 ---------- */
+function load(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
+function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+function call(fn, ...args) {
+  return new Promise((res, rej) => google.script.run.withSuccessHandler(res).withFailureHandler(rej)[fn](...args));
+}
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function errMsg(e) { return (e && e.message) || String(e); }
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg; t.style.display = 'block';
+  clearTimeout(toast.timer); toast.timer = setTimeout(() => (t.style.display = 'none'), 3500);
+}
+function ago(ts, now) {
+  const m = Math.floor((now - ts) / 60000);
+  return m < 1 ? '방금' : m < 60 ? m + '분 전' : Math.floor(m / 60) + '시간 ' + (m % 60) + '분 전';
+}
+function hhmm(ts) { if (!ts) return ''; const d = new Date(ts); return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
+function chips(el, name, list, type, checked) {
+  el.innerHTML = list.map((v) => {
+    const val = Array.isArray(v) ? v[0] : v, lab = Array.isArray(v) ? v[1] : v;
+    return `<label><input type="${type}" name="${name}" value="${esc(val)}"${checked.includes(val) ? ' checked' : ''}><span>${esc(lab)}</span></label>`;
+  }).join('');
+}
+function checked(name) { return [...document.querySelectorAll(`input[name="${name}"]:checked`)].map((i) => i.value); }
+function options(el, list) { el.innerHTML = list.map((v) => `<option value="${esc(v[0])}">${esc(v[1])}</option>`).join(''); }
+function telHref(s) { return 'tel:' + String(s || '').replace(/[^0-9+]/g, ''); }
+function respLabel(type, st) {
+  const t = cfg.types[type] || {};
+  return { accept: t.accept, reject: t.reject, arrived: '현장 도착 · 처리 중', done: '처리 완료' }[st] || '응답 대기';
+}
+function typeName(type) { const t = cfg.types[type]; return t ? t.icon + ' ' + t.label : type; }
+// 브라우저 확인창 대신 버튼을 한 번 더 누르게 한다.
+function armed(b, text) {
+  if (b.dataset.armed) return true;
+  const old = b.textContent;
+  b.dataset.armed = '1'; b.textContent = text || '한 번 더 누르면 실행됩니다';
+  setTimeout(() => { delete b.dataset.armed; b.textContent = old; }, 3000);
+  return false;
+}
+function handleAuthError(e) {
+  const m = errMsg(e);
+  if (m.indexOf('SESSION_EXPIRED') >= 0) { token = ''; save('pl_token', ''); toast('로그인이 만료되었습니다. 다시 로그인하세요.'); showLogin(); return true; }
+  if (m.indexOf('RECIPIENT_INVALID') >= 0) { rtoken = ''; save('pl_rtoken', ''); toast('개인 링크가 만료되었거나 사용 중지되었습니다. 관리자에게 새 링크를 받으세요.'); showLogin(); return true; }
+  return false;
+}
+
+/* ---------- 소리 ---------- */
+function unlockAudio() { try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume(); } catch (e) {} }
+document.addEventListener('click', unlockAudio, { passive: true });
+function beep() {
+  try {
+    if (audioCtx) [0, 0.25, 0.5].forEach((d) => {
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.frequency.value = 880; o.connect(g); g.connect(audioCtx.destination);
+      g.gain.setValueAtTime(0.25, audioCtx.currentTime + d);
+      o.start(audioCtx.currentTime + d); o.stop(audioCtx.currentTime + d + 0.15);
+    });
+  } catch (e) {}
+  try { navigator.vibrate && navigator.vibrate([300, 150, 300]); } catch (e) {}
+}
+
+/* ---------- ntfy 발송 (서버가 만든 내용을 그대로) ---------- */
+// Apps Script 서버는 ntfy.sh 에 접속할 수 없어 브라우저가 보낸다. text/plain 이면 사전 확인(preflight) 없이 바로 간다.
+function sendNtfy(list) {
+  list = list || [];
+  if (!list.length) return Promise.resolve(0);
+  return Promise.all(list.map((n) =>
+    fetch(n.server + '/', { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body: JSON.stringify(n.body) })
+      .then((r) => r.ok).catch(() => false)
+  )).then((oks) => {
+    const fail = oks.filter((x) => !x).length;
+    if (fail) toast(`⚠ 휴대폰 알림(ntfy) ${fail}건 전송 실패 — PoliceLink 화면에는 표시됩니다.`);
+    return oks.length - fail;
+  });
+}
+
+/* ---------- 화면 전환 ---------- */
+function hideAll() {
+  ['boot', 'login', 'recipient', 'tab-board', 'tab-new', 'tab-recips', 'tab-admin'].forEach((id) => $(id).classList.add('hidden'));
+  $('nav').classList.add('hidden');
+}
+function showLogin() {
+  stopTimers(); hideAll(); me = null; rMe = null; mode = ''; pendingIds = []; silenced = [];
+  $('who').textContent = ''; $('btnLogout').classList.add('hidden');
+  $('login').classList.remove('hidden');
+}
+function stopTimers() {
+  clearInterval(pollTimer); clearInterval(realertTimer); pollTimer = realertTimer = null;
+  updateRinging();
+}
+
+$('btnLogin').onclick = async () => {
+  const b = $('btnLogin'); b.disabled = true;
+  try {
+    const r = await call('login', $('lId').value, $('lPin').value);
+    token = r.token; save('pl_token', token);
+    $('lPin').value = '';
+    enterStaff(r.user);
+  } catch (e) { toast(errMsg(e)); } finally { b.disabled = false; }
+};
+$('lPin').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('btnLogin').click(); });
+$('btnLogout').onclick = async () => {
+  if (!armed($('btnLogout'), '한 번 더')) return;
+  if (token) call('logout', token).catch(() => {});
+  token = ''; rtoken = ''; save('pl_token', ''); save('pl_rtoken', '');
+  showLogin();
+};
+
+/* ======================================================================
+ * 직원 화면
+ * ==================================================================== */
+function enterStaff(user) {
+  me = user; mode = 'staff'; hideAll(); seen = null;
+  $('who').innerHTML = `${esc(user.name)}<br>${esc(cfg.roles[user.role])}`;
+  $('btnLogout').classList.remove('hidden');
+  $('nav').classList.remove('hidden');
+  $('navAdmin').classList.toggle('hidden', user.role !== 'admin');
+  setupNewForm();
+  showTab(tab === 'admin' && user.role !== 'admin' ? 'board' : tab);
+  loadRecipients();
+  pollTimer = setInterval(() => { if (!document.hidden) refreshBoard(); }, POLL_MS);
+  refreshBoard();
+  if (user.role === 'admin' || user.role === 'dispatcher') {
+    realertTimer = setInterval(checkRealert, REALERT_CHECK_MS);
+    $('realertInfo').textContent = `🔁 이 화면이 열려 있는 동안 응답 없는 대상에게 ${cfg.realertMin}분마다 다시 알립니다 (최대 3번). 관제 PC 에서 상황판을 켜 두세요.`;
+  } else $('realertInfo').textContent = '';
+}
+
+document.querySelectorAll('#nav button').forEach((b) => (b.onclick = () => showTab(b.dataset.tab)));
+function showTab(t) {
+  tab = t;
+  document.querySelectorAll('#nav button').forEach((b) => b.classList.toggle('on', b.dataset.tab === t));
+  ['board', 'new', 'recips', 'admin'].forEach((x) => $('tab-' + x).classList.toggle('hidden', x !== t));
+  if (t === 'new') loadCandidates();
+  if (t === 'recips') loadRecipients();
+  if (t === 'admin') showAdmin(adminTab);
+}
+
+/* ---------- 상황판 ---------- */
+async function refreshBoard() {
+  if (polling || !token) return;
+  polling = true;
+  try { renderBoard(await call('dashboard', token)); }
+  catch (e) { if (!handleAuthError(e)) toast('연결 오류: ' + errMsg(e)); }
+  finally { polling = false; }
+}
+
+function renderBoard(d) {
+  const now = d.now, items = d.items;
+  const canDispatch = me.role === 'admin' || me.role === 'dispatcher';
+  $('sOpen').textContent = items.filter((r) => r.status === 'open').length;
+  $('sAssigned').textContent = items.filter((r) => r.status === 'assigned').length;
+  $('sUrgent').textContent = items.filter((r) => r.urgency === '긴급' && (r.status === 'open' || r.status === 'assigned')).length;
+  $('sDone').textContent = items.filter((r) => r.status === 'done').length;
+
+  if (d.patrols.length) {
+    $('patrolBar').classList.remove('hidden');
+    $('patrolBar').innerHTML = '<b>🚓 순찰차</b> ' + d.patrols.map((p) =>
+      `<span class="tag ${p.status === '가용' ? 'done' : p.status === '출동중' ? 'assigned' : 'cancelled'}">${esc(p.name)} ${esc(p.status)}${p.zone ? ' · ' + esc(p.zone) : ''}</span>`).join('');
+  } else $('patrolBar').classList.add('hidden');
+
+  const keys = [];
+  $('bList').innerHTML = items.map((r) => {
+    const active = r.status === 'open' || r.status === 'assigned';
+    const rows = r.targets.map((t) => {
+      const st = t.response ? t.response.status : 'none';
+      keys.push(r.requestId + '|' + t.recipientId + '|' + st);
+      const isAssigned = r.assignedTo === t.recipientId;
+      const canAssign = canDispatch && active && st === 'accept' && !isAssigned;
+      return `<div class="resp">
+        <span class="name">${esc(t.name)} <span class="muted">${esc(t.org)}${t.status ? ' · ' + esc(t.status) : ''}</span></span>
+        <span class="st ${st}">${esc(respLabel(r.type, st))}${t.response ? ' <span class="muted">' + hhmm(t.response.at) + '</span>' : ''}</span>
+        ${isAssigned ? '<span class="tag assigned">배정됨</span>' : ''}
+        ${canAssign ? `<button class="btn-sm b-green" data-act="assign" data-id="${esc(r.requestId)}" data-to="${esc(t.recipientId)}">${r.assignedTo ? '재배정' : '배정'}</button>` : ''}
+      </div>`;
+    }).join('');
+    const accepted = r.targets.filter((t) => t.response && t.response.status === 'accept').length;
+    const answered = r.targets.filter((t) => t.response).length;
+    const btns = [];
+    if (active && canDispatch) btns.push(`<button class="btn-line" data-act="done" data-id="${esc(r.requestId)}">처리 완료</button>`);
+    if (active && (canDispatch || r.requesterId === me.userId)) btns.push(`<button class="btn-line" data-act="cancel" data-id="${esc(r.requestId)}">요청 취소</button>`);
+    return `<div class="card ${r.urgency === '긴급' && active ? 'urgent' : ''} ${active ? '' : 'closed'}">
+      <div class="req-head"><span class="req-id">${typeName(r.type)} · ${esc(r.requestId)}</span><span class="muted">${ago(r.createdAt, now)}</span></div>
+      <div><span class="tag ${r.urgency === '긴급' ? 'urgent' : ''}">${esc(r.urgency)}</span><span class="tag ${r.status}">${STATUS_LABEL[r.status] || esc(r.status)}</span>
+        ${r.zone ? `<span class="tag">${esc(r.zone)}</span>` : ''}${r.language ? `<span class="tag">${esc(r.language)}</span>` : ''}
+        ${r.realertCount ? `<span class="tag">재알림 ${r.realertCount}회</span>` : ''}</div>
+      ${r.location ? `<div class="muted">📍 ${esc(r.location)}</div>` : ''}
+      <div class="sum">${esc(r.summary)}</div>
+      ${r.detail ? `<div class="detail">🔒 ${esc(r.detail)}</div>` : ''}
+      <div class="muted">요청: ${esc(r.requesterName)}${r.callback ? ` · <a class="tel" href="${telHref(r.callback)}">${esc(r.callback)}</a>` : ''}
+        · 응답 ${answered}/${r.targets.length} · ${esc(cfg.types[r.type].accept)} ${accepted}</div>
+      ${rows}
+      ${btns.length ? `<div class="row">${btns.join('')}</div>` : ''}
+    </div>`;
+  }).join('') || '<p class="muted">진행 중인 요청이 없습니다.</p>';
+
+  if (seen) {
+    const fresh = keys.filter((k) => !seen.includes(k) && !k.endsWith('|none'));
+    if (fresh.length) { beep(); toast(`새 응답 ${fresh.length}건이 도착했습니다.`); }
+  }
+  seen = keys;
+}
+
+$('bList').onclick = async (ev) => {
+  const b = ev.target.closest('button[data-act]');
+  if (!b) return;
+  const act = b.dataset.act;
+  if (act !== 'assign' && !armed(b, act === 'done' ? '한 번 더 누르면 완료' : '한 번 더 누르면 취소')) return;
+  b.disabled = true;
+  try {
+    let r;
+    if (act === 'assign') { r = await call('assign', token, b.dataset.id, b.dataset.to); toast('배정했습니다. 배정 대상에게 알림을 보냅니다.'); }
+    else { r = await call('closeRequest', token, b.dataset.id, act === 'done' ? 'done' : 'cancelled'); toast(act === 'done' ? '처리 완료로 기록했습니다.' : '요청을 취소했습니다.'); }
+    sendNtfy(r.ntfy);
+    refreshBoard();
+  } catch (e) { if (!handleAuthError(e)) toast(errMsg(e)); b.disabled = false; }
+};
+
+async function checkRealert() {
+  if (!token || document.hidden) return;
+  try {
+    const list = await call('pendingRealerts', token);
+    if (list.length) { const n = await sendNtfy(list); if (n) toast(`🔁 응답 없는 대상에게 다시 알림 ${n}건`); }
+  } catch (e) { handleAuthError(e); }
+}
+
+/* ---------- 신규 요청 ---------- */
+function setupNewForm() {
+  const types = Object.keys(cfg.types).map((k) => [k, cfg.types[k].icon + ' ' + cfg.types[k].label]);
+  chips($('nType'), 'nType', types, 'radio', [load('pl_last_type', 'patrol')]);
+  chips($('nUrg'), 'nUrg', cfg.urgency, 'radio', ['긴급']);
+  options($('nLang'), cfg.languages.map((l) => [l, l]));
+  $('nCall').value = load('pl_callback', '');
+  document.querySelectorAll('input[name="nType"]').forEach((i) => (i.onchange = loadCandidates));
+  document.querySelectorAll('input[name="nUrg"]').forEach((i) => (i.onchange = loadCandidates));
+  $('nLang').onchange = loadCandidates;
+  $('nZone').onchange = loadCandidates;
+}
+
+let candSeq = 0;
+async function loadCandidates() {
+  const type = checked('nType')[0];
+  $('nLangBox').classList.toggle('hidden', type !== 'interpreter');
+  const seq = ++candSeq;
+  $('nCands').innerHTML = '<p class="muted">대상 불러오는 중…</p>';
+  try {
+    const list = await call('candidates', token, type, { zone: $('nZone').value, urgency: checked('nUrg')[0], language: $('nLang').value });
+    if (seq !== candSeq) return;
+    $('nCandInfo').textContent = type === 'patrol' ? '(가용 · 담당 구역 · 진행 임무 기준 추천 — 최종 배정은 상황관리자가 결정)'
+      : type === 'interpreter' ? '(선택한 언어 가능 통역원 일괄 호출)' : '';
+    $('nCands').innerHTML = list.map((c) => `
+      <label class="cand"><input type="checkbox" name="nCand" value="${esc(c.recipientId)}"${c.recommended ? ' checked' : ''}>
+        <span><b>${esc(c.name)}</b>${c.recommended && type === 'patrol' ? '<span class="badge">추천</span>' : ''}
+        <br><span class="muted">${esc(c.org)}${c.detail ? ' · ' + esc(c.detail) : ''}${c.zone ? ' · ' + esc(c.zone) : ''}${c.reason ? ' — ' + esc(c.reason) : ''}</span></span></label>`).join('')
+      || '<p class="muted">해당하는 대상이 없습니다. 관리자 화면에서 수신자를 등록하세요.</p>';
+  } catch (e) { if (!handleAuthError(e)) $('nCands').innerHTML = '<p class="muted">' + esc(errMsg(e)) + '</p>'; }
+}
+
+$('btnSend').onclick = async () => {
+  const data = {
+    type: checked('nType')[0], urgency: checked('nUrg')[0], location: $('nLoc').value, zone: $('nZone').value,
+    language: $('nLang').value, summary: $('nSum').value, detail: $('nDetail').value, callback: $('nCall').value,
+    targets: checked('nCand'),
+  };
+  if (!data.summary.trim()) return toast('요청 내용을 입력하세요.');
+  if (!data.targets.length) return toast('알림 대상을 1곳 이상 선택하세요.');
+  const b = $('btnSend'); b.disabled = true;
+  try {
+    const r = await call('createRequest', token, data);
+    const n = await sendNtfy(r.ntfy);
+    save('pl_last_type', data.type); save('pl_callback', data.callback);
+    $('nSum').value = ''; $('nDetail').value = ''; $('nLoc').value = '';
+    toast(`요청 ${r.requestId} 등록 · 알림 ${n}/${data.targets.length}건 발송`);
+    showTab('board'); refreshBoard();
+  } catch (e) { if (!handleAuthError(e)) toast(errMsg(e)); } finally { b.disabled = false; }
+};
+
+/* ---------- 수신자 목록 ---------- */
+let rFilter = 'all';
+async function loadRecipients() {
+  try {
+    recips = await call('listRecipients', token);
+    const zones = [...new Set(recips.filter((x) => x.zone).map((x) => x.zone))];
+    $('zoneList').innerHTML = zones.map((z) => `<option value="${esc(z)}">`).join('');
+    renderRecipients();
+    if (me.role === 'admin') renderRcTable();
+  } catch (e) { handleAuthError(e); }
+}
+function renderRecipients() {
+  chips($('rFilter'), 'rFilter', [['all', '전체']].concat(Object.keys(cfg.types).map((k) => [k, typeName(k)])), 'radio', [rFilter]);
+  document.querySelectorAll('input[name="rFilter"]').forEach((i) => (i.onchange = () => { rFilter = i.value; renderRecipients(); }));
+  const canDispatch = me.role === 'admin' || me.role === 'dispatcher';
+  $('rList').innerHTML = Object.keys(cfg.types).filter((k) => rFilter === 'all' || rFilter === k).map((k) => {
+    const list = recips.filter((x) => x.type === k && x.active === 'Y');
+    return `<div class="card"><h2>${typeName(k)} <span class="muted">${list.length}곳</span></h2>
+      ${list.map((x) => `<div class="resp"><span class="name">${esc(x.name)} <span class="muted">${esc(x.recipientId)}</span><br>
+        <span class="muted">${esc(x.org)}${x.detail ? ' · ' + esc(x.detail) : ''}${x.zone ? ' · ' + esc(x.zone) : ''}</span></span>
+        ${k === 'patrol' ? (canDispatch
+          ? cfg.patrolStatus.map((s) => `<button class="btn-sm ${x.status === s ? 'b-blue' : 'btn-line'}" data-pid="${esc(x.recipientId)}" data-ps="${esc(s)}">${esc(s)}</button>`).join('')
+          : `<span class="tag">${esc(x.status)}</span>`) : ''}
+      </div>`).join('') || '<p class="muted">등록된 대상이 없습니다.</p>'}</div>`;
+  }).join('');
+}
+$('rList').onclick = async (ev) => {
+  const b = ev.target.closest('button[data-pid]');
+  if (!b) return;
+  b.disabled = true;
+  try { await call('setPatrolStatus', token, b.dataset.pid, b.dataset.ps); toast('순찰차 상태를 바꿨습니다.'); loadRecipients(); refreshBoard(); }
+  catch (e) { if (!handleAuthError(e)) toast(errMsg(e)); b.disabled = false; }
+};
+
+/* ---------- 관리자 ---------- */
+let adminTab = 'users';
+function showAdmin(t) {
+  adminTab = t;
+  chips($('aTabs'), 'aTab', [['users', '👤 직원 계정'], ['recips', '👥 수신자 · 개인 링크'], ['audit', '🧾 감사기록']], 'radio', [t]);
+  document.querySelectorAll('input[name="aTab"]').forEach((i) => (i.onchange = () => showAdmin(i.value)));
+  ['users', 'recips', 'audit'].forEach((x) => $('a-' + x).classList.toggle('hidden', x !== t));
+  if (t === 'users') loadUsers();
+  if (t === 'recips') loadRecipients();
+  if (t === 'audit') loadAudit();
+}
+
+let users = [];
+async function loadUsers() {
+  options($('uRole'), Object.keys(cfg.roles).map((k) => [k, cfg.roles[k]]));
+  try {
+    users = await call('listUsers', token);
+    $('uTable').innerHTML = '<tr><th>아이디</th><th>이름</th><th>소속</th><th>역할</th><th>사용</th><th></th></tr>' + users.map((u) =>
+      `<tr><td>${esc(u.userId)}</td><td>${esc(u.name)}</td><td>${esc(u.org)}</td><td>${esc(cfg.roles[u.role] || u.role)}</td><td>${u.active === 'Y' ? '사용' : '중지'}</td>
+       <td><button class="btn-sm btn-line" data-uedit="${esc(u.userId)}">수정</button> <button class="btn-sm btn-line" data-upin="${esc(u.userId)}">PIN 재발급</button></td></tr>`).join('');
+  } catch (e) { if (!handleAuthError(e)) toast(errMsg(e)); }
+}
+function fillUser(u) {
+  $('uId').value = u ? u.userId : ''; $('uId').disabled = !!u;
+  $('uName').value = u ? u.name : ''; $('uOrg').value = u ? u.org : '';
+  $('uRole').value = u ? u.role : 'officer'; $('uActive').value = u ? u.active : 'Y';
+}
+$('btnUserClear').onclick = () => { fillUser(null); $('uPinBox').classList.add('hidden'); };
+async function saveUser(resetPin) {
+  try {
+    const r = await call('saveUser', token, { userId: $('uId').value, name: $('uName').value, org: $('uOrg').value,
+      role: $('uRole').value, active: $('uActive').value, resetPin: resetPin });
+    if (r.pin) {
+      $('uPinBox').classList.remove('hidden');
+      $('uPinBox').innerHTML = `<b>${esc(r.userId)}</b> 의 PIN (지금만 보입니다 · 본인에게 직접 전달): <div class="pin">${esc(r.pin)}</div>`;
+    } else toast('저장했습니다.');
+    loadUsers();
+  } catch (e) { if (!handleAuthError(e)) toast(errMsg(e)); }
+}
+$('btnUserSave').onclick = () => saveUser(false);
+$('uTable').onclick = (ev) => {
+  const e = ev.target.closest('button[data-uedit]'), p = ev.target.closest('button[data-upin]');
+  if (e) { fillUser(users.find((u) => u.userId === e.dataset.uedit)); $('uPinBox').classList.add('hidden'); window.scrollTo(0, 0); }
+  if (p) { if (!armed(p, '한 번 더')) return; fillUser(users.find((u) => u.userId === p.dataset.upin)); saveUser(true); }
+};
+
+function renderRcTable() {
+  $('rcTable').innerHTML = '<tr><th>ID</th><th>유형</th><th>이름</th><th>소속 · 상세</th><th>구역 · 상태</th><th>사용</th><th></th></tr>' + recips.map((x) =>
+    `<tr><td>${esc(x.recipientId)}</td><td>${typeName(x.type)}</td><td>${esc(x.name)}</td><td>${esc(x.org)}<br><span class="muted">${esc(x.detail)}</span></td>
+     <td>${esc(x.zone)} ${esc(x.status)}</td><td>${x.active === 'Y' ? '사용' : '중지'}</td>
+     <td><button class="btn-sm btn-line" data-rcedit="${esc(x.recipientId)}">수정</button> <button class="btn-sm btn-line" data-rclink="${esc(x.recipientId)}">개인 링크</button></td></tr>`).join('');
+}
+function fillRc(x) {
+  options($('rcType'), Object.keys(cfg.types).map((k) => [k, typeName(k)]));
+  options($('rcStatus'), [['', '-']].concat(cfg.patrolStatus.map((s) => [s, s])));
+  $('rcId').value = x ? x.recipientId : ''; $('rcType').value = x ? x.type : 'patrol'; $('rcType').disabled = !!x;
+  $('rcName').value = x ? x.name : ''; $('rcOrg').value = x ? x.org : ''; $('rcDetail').value = x ? x.detail : '';
+  $('rcZone').value = x ? x.zone : ''; $('rcContact').value = x ? x.contact : ''; $('rcStatus').value = x ? x.status : '';
+  $('rcActive').value = x ? x.active : 'Y';
+}
+function showLink(x) {
+  $('rcLinkBox').classList.remove('hidden');
+  $('rcLinkBox').innerHTML = `<b>${esc(x.name)}</b> 개인 링크 — 승인된 경로로 본인에게만 전달하세요 (링크 = 로그인 정보).
+    <input type="text" readonly value="${esc(x.link)}" onclick="this.select()" style="margin-top:6px">
+    <div class="row"><button class="btn-sm btn-line" data-rcnew="${esc(x.recipientId)}">링크 재발급 (이전 링크 즉시 무효)</button></div>`;
+}
+$('btnRcClear').onclick = () => { fillRc(null); $('rcLinkBox').classList.add('hidden'); };
+$('btnRcSave').onclick = async () => {
+  try {
+    const r = await call('saveRecipient', token, { recipientId: $('rcId').value, type: $('rcType').value, name: $('rcName').value, org: $('rcOrg').value,
+      detail: $('rcDetail').value, zone: $('rcZone').value, contact: $('rcContact').value, status: $('rcStatus').value, active: $('rcActive').value });
+    toast(r.recipientId + ' 저장했습니다.');
+    await loadRecipients();
+    const x = recips.find((y) => y.recipientId === r.recipientId);
+    if (x) { fillRc(x); showLink(x); }
+  } catch (e) { if (!handleAuthError(e)) toast(errMsg(e)); }
+};
+$('rcTable').onclick = (ev) => {
+  const e = ev.target.closest('button[data-rcedit]'), l = ev.target.closest('button[data-rclink]');
+  const id = e ? e.dataset.rcedit : l ? l.dataset.rclink : null;
+  const x = recips.find((y) => y.recipientId === id);
+  if (e && x) { fillRc(x); $('rcLinkBox').classList.add('hidden'); window.scrollTo(0, 0); }
+  if (l && x) { fillRc(x); showLink(x); window.scrollTo(0, 0); }
+};
+$('rcLinkBox').onclick = async (ev) => {
+  const b = ev.target.closest('button[data-rcnew]');
+  if (!b || !armed(b, '한 번 더 누르면 재발급')) return;
+  const x = recips.find((y) => y.recipientId === b.dataset.rcnew);
+  try {
+    await call('saveRecipient', token, Object.assign({}, x, { newToken: true }));
+    await loadRecipients();
+    showLink(recips.find((y) => y.recipientId === x.recipientId));
+    toast('새 링크를 발급했습니다. 이전 링크는 더 이상 쓸 수 없습니다.');
+  } catch (e) { if (!handleAuthError(e)) toast(errMsg(e)); }
+};
+
+const ACTION_LABEL = { login: '로그인', create: '요청 생성', assign: '배정', complete: '처리 완료', cancel: '취소', realert: '재알림',
+  respond: '수신자 응답', patrol_status: '순찰차 상태', user_save: '계정 저장', recipient_save: '수신자 저장' };
+async function loadAudit() {
+  try {
+    const list = await call('listAudit', token, 200);
+    $('auTable').innerHTML = '<tr><th>시각</th><th>작업자</th><th>작업</th><th>대상</th><th>결과</th><th>내용</th></tr>' + list.map((a) =>
+      `<tr><td>${esc(new Date(a.at).toLocaleString('ko-KR'))}</td><td>${esc(a.actor)}<br><span class="muted">${esc(a.role)}</span></td>
+       <td>${esc(ACTION_LABEL[a.action] || a.action)}</td><td>${esc(a.target)}</td><td>${esc(a.result)}</td><td>${esc(a.detail)}</td></tr>`).join('');
+  } catch (e) { if (!handleAuthError(e)) toast(errMsg(e)); }
+}
+$('btnAudit').onclick = loadAudit;
+
+/* ======================================================================
+ * 수신자 화면 (개인 링크)
+ * ==================================================================== */
+let rMe = null;
+function enterRecipient() {
+  mode = 'recipient'; hideAll(); seen = null;
+  $('recipient').classList.remove('hidden');
+  $('btnLogout').classList.remove('hidden');
+  pollTimer = setInterval(() => { if (!document.hidden) refreshRecipient(); }, POLL_MS);
+  refreshRecipient();
+}
+
+async function refreshRecipient() {
+  if (polling || !rtoken) return;
+  polling = true;
+  try { renderRecipient(await call('recipientView', rtoken)); }
+  catch (e) { if (!handleAuthError(e)) toast('연결 오류: ' + errMsg(e)); }
+  finally { polling = false; }
+}
+
+function renderRecipient(d) {
+  const first = !rMe;
+  rMe = d.me;
+  $('who').innerHTML = `${esc(rMe.name)}<br>${esc(rMe.org)}`;
+  if (first) {
+    $('rPush').classList.toggle('hidden', !!load('pl_ntfy_done_' + rMe.recipientId, false));
+    $('rSubscribe').href = d.ntfy.link;
+    $('rTopic').textContent = '구독 버튼이 안 열리면 ntfy 앱 ＋ 에서 이 토픽을 입력: ' + d.ntfy.topic;
+    ntfyLink = d.ntfy.link;
+  }
+  const isPatrol = rMe.type === 'patrol';
+  $('rPatrol').classList.toggle('hidden', !isPatrol);
+  if (isPatrol) $('rPatrolBtns').innerHTML = cfg.patrolStatus.map((s) =>
+    `<button class="${rMe.status === s ? 'b-blue' : 'btn-line'}" data-ps="${esc(s)}">${esc(s)}</button>`).join('');
+  $('rInfo').textContent = `${typeName(rMe.type)} · 이 화면이 켜져 있으면 응답할 때까지 소리 · 진동이 울립니다 (처음 한 번 화면을 터치해야 소리가 남).`;
+
+  const now = d.now;
+  const pend = d.items.filter((r) => r.status === 'open' && !r.mine);
+  pendingIds = pend.map((r) => r.requestId);
+  const openIds = d.items.filter((r) => r.status === 'open').map((r) => r.requestId);
+  const fresh = seen ? openIds.filter((id) => !seen.includes(id)) : [];
+  $('rAlarm').textContent = `🚨 응답 대기 ${pend.length}건 — 응답 버튼을 눌러 주세요` +
+    (pendingIds.every((id) => silenced.includes(id)) ? ' (소리 꺼짐)' : ' · 여기를 누르면 소리가 꺼집니다');
+  $('rAlarm').classList.toggle('hidden', !pend.length);
+  updateRinging();
+
+  const t = cfg.types[rMe.type];
+  $('rReqs').innerHTML = d.items.map((r) => {
+    const open = r.status === 'open', mine = r.mine ? r.mine.status : '';
+    let body = '';
+    if (open) body = `<div class="actions">
+        <button class="b-green" data-id="${esc(r.requestId)}" data-st="accept">${esc(t.accept)}</button>
+        <button class="b-red" data-id="${esc(r.requestId)}" data-st="reject">${esc(t.reject)}</button></div>
+        ${mine ? `<div class="banner info">내 응답: <span class="st ${mine}">${esc(respLabel(r.type, mine))}</span> · 배정을 기다리는 중 (바꿀 수 있음)</div>` : ''}`;
+    else if (r.assignedToMe && r.status === 'assigned') body = `<div class="banner blue">✅ 나에게 배정되었습니다</div>
+        <div class="actions"><button class="b-amber" data-id="${esc(r.requestId)}" data-st="arrived">${mine === 'arrived' ? '✔ 현장 도착 · 처리 중' : '현장 도착 · 처리 시작'}</button>
+        <button class="b-green" data-id="${esc(r.requestId)}" data-st="done">처리 완료</button></div>`;
+    else if (r.assignedToMe && r.status === 'done') body = '<div class="banner ok">✅ 처리 완료</div>';
+    else if (r.status === 'cancelled') body = '<div class="banner info">요청이 취소되었습니다</div>';
+    else body = '<div class="banner info">다른 대상이 배정되었거나 종료된 요청입니다. 감사합니다.</div>';
+    return `<div class="card ${r.urgency === '긴급' ? 'urgent' : ''} ${open && !mine ? 'pending' : ''} ${fresh.includes(r.requestId) ? 'new' : ''}">
+      <div class="req-head"><span class="req-id">${typeName(r.type)} · ${esc(r.requestId)}</span><span class="muted">${ago(r.createdAt, now)}</span></div>
+      <div><span class="tag ${r.urgency === '긴급' ? 'urgent' : ''}">${esc(r.urgency)}</span>${r.language ? `<span class="tag">${esc(r.language)}</span>` : ''}${r.zone ? `<span class="tag">${esc(r.zone)}</span>` : ''}</div>
+      ${r.location ? `<div class="muted">📍 ${esc(r.location)}</div>` : ''}
+      <div class="sum">${esc(r.summary)}</div>
+      ${r.detail ? `<div class="detail">🔒 ${esc(r.detail)}</div>` : ''}
+      <div class="muted">요청: ${esc(r.requesterName)}${r.callback ? ` · 회신 <a class="tel" href="${telHref(r.callback)}">${esc(r.callback)}</a>` : ''}</div>
+      ${body}
+    </div>`;
+  }).join('') || '<p class="muted">들어온 요청이 없습니다. 이 화면을 켜 두면 자동으로 표시됩니다.</p>';
+
+  if (fresh.length) toast(`새 요청 ${fresh.length}건이 도착했습니다.`);
+  const assignedNow = d.items.filter((r) => r.assignedToMe && r.status === 'assigned').map((r) => 'a' + r.requestId);
+  if (seen && assignedNow.some((k) => !seen.includes(k))) { beep(); toast('나에게 배정되었습니다.'); }
+  seen = openIds.concat(assignedNow);
+}
+
+function updateRinging() {
+  const on = rMe && !$('recipient').classList.contains('hidden') && pollTimer && pendingIds.some((id) => !silenced.includes(id));
+  if (on && !ringTimer) { beep(); ringTimer = setInterval(beep, RING_MS); }
+  else if (!on && ringTimer) { clearInterval(ringTimer); ringTimer = null; }
+}
+
+// ntfy 의 계속 울리기는 ntfy 토픽 화면이 새로 열릴 때만 멈춘다 → 누른 순간(사용자 동작 안)에 ntfy:// 를 연다.
+function stopNtfyAlarm(ids) {
+  ids = ids.filter((id) => !ntfyQuiet.includes(id));
+  if (!IS_ANDROID || !ntfyLink || !ids.length) return;
+  ntfyQuiet = ids.concat(ntfyQuiet).slice(0, 50);
+  save('pl_ntfy_quiet', ntfyQuiet);
+  const a = document.createElement('a');
+  a.href = ntfyLink; a.target = '_blank'; a.click();
+}
+
+$('rAlarm').onclick = () => {
+  silenced = pendingIds.slice();
+  updateRinging();
+  $('rAlarm').textContent = `🚨 응답 대기 ${pendingIds.length}건 — 응답 버튼을 눌러 주세요 (소리 꺼짐)`;
+  stopNtfyAlarm(pendingIds);
+};
+$('rReqs').onclick = async (ev) => {
+  const b = ev.target.closest('button[data-st]');
+  if (!b) return;
+  if (b.dataset.st === 'done' && !armed(b, '한 번 더 누르면 완료')) return;
+  stopNtfyAlarm([b.dataset.id]);
+  const all = b.parentNode.querySelectorAll('button');
+  all.forEach((x) => (x.disabled = true));
+  try {
+    await call('recipientRespond', rtoken, b.dataset.id, b.dataset.st, '');
+    toast(`'${respLabel(rMe.type, b.dataset.st)}' 응답을 보냈습니다.`);
+    refreshRecipient();
+  } catch (e) { if (!handleAuthError(e)) toast(errMsg(e)); all.forEach((x) => (x.disabled = false)); }
+};
+$('rPatrolBtns').onclick = async (ev) => {
+  const b = ev.target.closest('button[data-ps]');
+  if (!b) return;
+  try { await call('recipientSetStatus', rtoken, b.dataset.ps); toast('상태: ' + b.dataset.ps); refreshRecipient(); }
+  catch (e) { if (!handleAuthError(e)) toast(errMsg(e)); }
+};
+$('btnPushDone').onclick = () => { if (rMe) save('pl_ntfy_done_' + rMe.recipientId, true); $('rPush').classList.add('hidden'); };
+$('lnkPush').onclick = (ev) => { ev.preventDefault(); $('rPush').classList.remove('hidden'); $('rPush').scrollIntoView({ behavior: 'smooth' }); };
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden || !pollTimer) return;
+  mode === 'recipient' ? refreshRecipient() : refreshBoard();
+});
+
+/* ---------- 시작 ---------- */
+function getParam() {
+  return new Promise((res) => {
+    try { google.script.url.getLocation((loc) => res((loc && loc.parameter) || {})); } catch (e) { res({}); }
+  });
+}
+(async () => {
+  try {
+    cfg = await call('getConfig');
+    if (!cfg.ready) { $('boot').textContent = '관리자가 아직 설치(setup)를 하지 않았습니다. README 의 설치 절차를 확인하세요.'; return; }
+    fillRc(null);
+    const p = await getParam();
+    if (p.r) { rtoken = p.r; save('pl_rtoken', rtoken); }
+    if (rtoken) return enterRecipient();
+    if (token) {
+      try { return enterStaff(await call('whoami', token)); }
+      catch (e) { token = ''; save('pl_token', ''); }
+    }
+    showLogin();
+  } catch (e) { $('boot').textContent = '서버 연결 실패: ' + errMsg(e); }
+})();
+</script>
+</body>
+</html>
