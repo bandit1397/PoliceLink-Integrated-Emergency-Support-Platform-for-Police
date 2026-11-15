@@ -23,6 +23,7 @@
 - 수신자: 개인 링크 `?r=<token>` (RECIPIENTS.token). 토픽 `pl-` + 20자, 수신자마다 하나. ID = 유형접두어-순번 (`PT/IN/FN/AG/HP-001`), 순번 재사용 안 함.
   삭제 = `active='D'` + 토큰 교체 (행 유지). `active==='Y'` 만 후보 · 로그인 가능
 - 통역 요청 대상 = `detail`(가능 언어, 쉼표 구분)에 요청 언어가 있는 통역원 (`candidates`)
+- 권역(응급실 · 통역원): RECIPIENTS.zone = `CONFIG.REGIONS` 중 하나 이상(비면 전체 구역). 요청에서 권역 안 고르면 전체
 - ntfy: 서버는 메시지 내용만 만들고 **브라우저가 ntfy.sh 로 POST** (Apps Script → ntfy.sh 차단). `sequence_id` = 요청번호. **click 넣지 말 것** (계속 울리기가 안 멈춤). 긴급=우선순위 5, 보통=4
 - 재알림: 상황판(admin/dispatcher) 브라우저가 1분마다 `pendingRealerts` (3분 간격 · 최대 3회)
 - 외부 기관에는 `detail`(내부 메모) · `requesterId` · 경찰관 이름을 보내지 않음 (`publicRequest_`, `orgsByUser_`, `CONFIG.TYPES.*.internal`)
@@ -67,6 +68,7 @@
 | 6 | 15:10 | `4d1107c` | 같은 커밋의 Index.html 반영: `?to=` 면 수신자 화면 우선 · 등록 없으면 '개인 링크를 여세요' 안내 · 직원 로그아웃은 수신자 등록 유지 · 수신자 화면 버튼 '등록 해제' |
 | 7 | 17:42 | `f23705b` | 수신자 휴대폰 알림 최근 3건만: 새 요청 때 4번째 오래된 알림을 ntfy `GET /<topic>/<seq>/delete` 로 삭제(`ntfyDel` → `deleteNtfy`). 밀려난 요청은 재알림 · 취소 안내 안 보냄 (`isRecentFor_`). ntfy.sh 한도: IP 당 메시지 250/일 (delete 도 1건) |
 | 8 | 19:28 | `38a13a1` | 요청 유형 `hospital` (🏥 병원 응급실, `HP-`): 동시 문의 · 수용 가능/불가 + 사유(`TYPES.hospital.reasons` → RESPONSES.note, 상황판 표시) · 배정 = 이송 결정 · 환자 도착 · 인계 완료. 수신자 화면은 4초마다 다시 그리므로 사유 버튼 펼침 상태를 `reasonOpen` 에 기억. 실제 시트에 응급실 수신자 없음 (관리자 화면에서 추가) |
+| 9 | 19:40 | `b32643a` | `CONFIG.REGIONS` 9개 (서울 4 · 경기 4 · 인천), `TYPES.*.regional` (hospital · interpreter). `candidates`: 요청 권역 있으면 `!x.zone` 또는 권역 일치만. 요청 권역은 목록 밖이면 '' (전체). 수신자 권역은 목록만 · 쉼표 여러 개 가능. 화면: 신규 요청 `nRegion` · 관리자 `rcRegion` |
 
 ## 현재 데이터 · 휴대폰 상태 (2026-11-15 15시 무렵)
 
