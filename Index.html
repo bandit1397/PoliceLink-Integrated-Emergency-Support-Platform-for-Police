@@ -782,7 +782,8 @@ function ntfyRestoreJson(x) {
     settings: null,
     subscriptions: [{
       id: Date.now() * 10,
-      baseUrl: 'https://ntfy.sh',
+      // 주의: Apps Script(HtmlService)는 스크립트의 '//' 뒤를 주석으로 잘라 낸다 → 문자열 안에서도 '//' 를 쓰지 말 것 (\/\/ 로)
+      baseUrl: 'https:\/\/ntfy.sh',
       topic: x.topic,
       instant: true,             // 즉시 전달 (Firebase 지연 없음)
       dedicatedChannels: false,  // 'ntfy-max' 채널 소리 그대로 → 사이렌 설정 유지

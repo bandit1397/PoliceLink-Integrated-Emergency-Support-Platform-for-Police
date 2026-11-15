@@ -410,4 +410,19 @@ console.log('ISOLATION OK');
 G.clearRequests();
 assert.strictEqual(G.rows_('REQUESTS', true).length, 0);
 assert.strictEqual(G.rows_('USERS', true).length, 4);
+// Index.html: Apps Script 는 <script> 안의 '//' 뒤를 주석으로 지운다 (문자열 안이어도). 버전 11 에서 'https://ntfy.sh' 가 잘려
+// 화면이 '불러오는 중…' 에서 멈춤 → 문자열 안의 '//' 금지 (따옴표 개수가 홀수인 위치의 '//' 를 찾음)
+{
+  const html = fs.readFileSync(require('path').join(__dirname, '..', 'Index.html'), 'utf8');
+  const code = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]).join('\n');
+  const bad = [];
+  code.split('\n').forEach((l, i) => {
+    // 첫 '//' 만 본다: 따옴표 밖이면 진짜 주석(뒤는 어차피 지워짐), 따옴표 안이면 문자열이 잘림
+    const p = l.indexOf('//');
+    if (p < 0) return;
+    const before = l.slice(0, p);
+    if (["'", '"', '`'].some((q) => before.split(q).length % 2 === 0)) bad.push((i + 1) + ': ' + l.trim());
+  });
+  assert.strictEqual(bad.join(' | '), '', "'//' inside a string in Index.html script (Apps Script strips it)");
+}
 console.log('ALL TESTS PASSED');
