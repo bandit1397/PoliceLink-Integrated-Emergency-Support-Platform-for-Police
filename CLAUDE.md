@@ -32,4 +32,7 @@
 - Apps Script 배포 완료: 편집기에 GitHub `main` 의 Code.gs · Index.html 붙여넣기 → `setupDemo` 실행(권한 승인, 시트 · 계정 3개 · 가상 수신자 12곳) → 웹앱 버전 1 (실행: 나, 액세스: 모든 사용자) → /exec 열어 로그인 화면 확인 (WEBAPP_URL 저장됨)
 - 편집기 반영 방법: 편집기 페이지에서 `monaco.editor.getModels()` 에 raw.githubusercontent.com 내용을 넣고 Ctrl+S (clasp 없음)
 - 버전 2 (2026-11-15 12:36, 커밋 `9ebf291`): 외부 기관 화면에 요청 경찰관 이름 대신 소속 (`orgsByUser_`). 편집기가 이전 커밋과 같은지 확인 후 교체 → 배포 관리 → 새 버전
+- 버전 3 (2026-11-15 14:13, 커밋 `405be0e`): 관리자 수신자 화면 = 유형별 순번 목록 · ＋ 추가(`nextRecipientSeq`) · 삭제(`deleteRecipient`, active=D 소프트 삭제 · 토큰 교체 · 번호 재사용 안 함). Code.gs · Index.html 둘 다 교체
+  - 배포 메뉴는 창 크기에 따라 위치가 바뀜 → 좌표 대신 find 로 '배포 관리' 를 찾아 누를 것 (한 번 '새 배포' 가 열려 취소함)
+  - UI 확인: 가짜 google.script.run 을 붙인 Index.html 을 127.0.0.1 로 띄워 확인 (실제 로그인은 PIN 이 필요해 사용자만 가능)
 - **아직 안 함**: 로그인 후 화면 흐름 · 휴대폰 ntfy 시험
