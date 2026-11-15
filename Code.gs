@@ -21,6 +21,10 @@ const CONFIG = {
     interpreter: { label: '통역원 호출',   icon: '🗣️', tag: 'speaking_head',      accept: '통역 가능', reject: '통역 불가' },
     finance:     { label: '금융기관 협조', icon: '🏦', tag: 'bank',               accept: '접수 확인', reject: '처리 불가' },
     agency:      { label: '유관기관 지원', icon: '🏛️', tag: 'classical_building', accept: '지원 가능', reject: '지원 불가' },
+    // 병원 응급실: 여러 곳에 동시에 수용 가능 여부를 묻고, 수용 가능한 곳 중 하나로 이송 결정(= 배정)
+    hospital:    { label: '병원 응급실', icon: '🏥', tag: 'hospital', accept: '수용 가능', reject: '수용 불가',
+                   reasons: ['병상 없음', '전문의 부재', '장비 · 검사 불가', '기타'],
+                   arrived: '환자 도착 · 진료 중', done: '인계 완료', assigned: '이송 확정 — 환자를 이송합니다. 앱에서 확인하세요.' },
   },
   URGENCY: ['긴급', '보통'],
   PATROL_STATUS: ['가용', '출동중', '휴식'],
@@ -196,7 +200,7 @@ function candidates(token, type, opts) {
   }
   return list.map((x) => ({
     recipientId: x.recipientId, name: x.name, org: x.org, detail: x.detail, zone: x.zone,
-    status: x.status, recommended: type === 'interpreter', reason: '',
+    status: x.status, recommended: type === 'interpreter' || type === 'hospital', reason: '',
   }));
 }
 
@@ -296,7 +300,7 @@ function assign(token, requestId, recipientId) {
   if (!out) return { ntfy: [] };
   audit_(sess, 'assign', requestId, 'ok', recipientId);
   const recips = indexBy_(rows_('RECIPIENTS'), 'recipientId');
-  const msgs = [ntfyInfo_(out.req, recips[recipientId], '배정 확정 — 앱에서 확인하세요.', 4)];
+  const msgs = [ntfyInfo_(out.req, recips[recipientId], CONFIG.TYPES[out.req.type].assigned || '배정 확정 — 앱에서 확인하세요.', 4)];
   // 이전 대상의 알림이 이미 밀려나 지워졌으면 다시 띄우지 않는다
   if (out.prev && isRecentFor_(rows_('REQUESTS'), out.prev, requestId)) msgs.push(ntfyInfo_(out.req, recips[out.prev], '다른 대상으로 재배정되었습니다.', 3));
   return { ntfy: msgs.filter(Boolean) };
@@ -509,7 +513,7 @@ function recipientView(rtoken) {
       // 외부 기관에는 요청 경찰관 이름 대신 소속만 (최소정보)
       if (!internal) o.requesterName = orgs[r.requesterId] || '경찰';
       const mine = latest[r.requestId + '|' + me.recipientId];
-      o.mine = mine ? { status: mine.status, at: mine.at } : null;
+      o.mine = mine ? { status: mine.status, note: mine.note, at: mine.at } : null;
       o.assignedToMe = r.assignedTo === me.recipientId;
       o.assignedOther = !!r.assignedTo && !o.assignedToMe;
       delete o.assignedTo;
@@ -662,7 +666,7 @@ function setup() {
   return lines.join('\n');
 }
 
-/** setup + 가상 직원 2명 · 가상 수신자 12곳 (이미 있으면 건너뜀) */
+/** setup + 가상 직원 2명 · 가상 수신자 14곳 (이미 있으면 건너뜀) */
 function setupDemo() {
   const lines = [setup()];
   if (!find_('USERS', 'userId', 'sit01')) {
@@ -686,6 +690,8 @@ function setupDemo() {
       ['agency', '소방 상황실 (가상)', 'OO소방서', '구조 · 구급', '', ''],
       ['agency', '구청 당직실 (가상)', 'OO구청', '행정 지원', '', ''],
       ['agency', '정신건강복지센터 (가상)', 'OO구 정신건강복지센터', '위기 개입', '', ''],
+      ['hospital', 'OO대학병원 응급실 (가상)', 'OO대학병원', '권역응급의료센터', '', ''],
+      ['hospital', 'OO시립병원 응급실 (가상)', 'OO시립병원', '지역응급의료기관', '', ''],
     ];
     demo.forEach((d) => {
       append_('RECIPIENTS', {
@@ -784,7 +790,7 @@ function recipientLink_(token) {
 }
 
 function nextRecipientId_(type) {
-  const pre = { patrol: 'PT', interpreter: 'IN', finance: 'FN', agency: 'AG' }[type];
+  const pre = { patrol: 'PT', interpreter: 'IN', finance: 'FN', agency: 'AG', hospital: 'HP' }[type];
   const n = rows_('RECIPIENTS', true).filter((x) => String(x.recipientId).indexOf(pre) === 0)
     .reduce((m, x) => Math.max(m, Number(String(x.recipientId).slice(3)) || 0), 0);
   return pre + '-' + ('00' + (n + 1)).slice(-3);

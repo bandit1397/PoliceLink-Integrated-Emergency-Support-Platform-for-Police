@@ -324,6 +324,32 @@ const cp = G.createRequest(off, { type: 'patrol', urgency: '보통', summary: '�
 assert.strictEqual(view('42호').items.find((r) => r.requestId === cp.requestId).requesterName, '순경 이OO');
 console.log('ISOLATION OK');
 
+// 병원 응급실: 여러 곳 동시 문의 → 수용 가능/불가(사유) → 이송 결정(배정) → 환자 도착 → 인계 완료
+{
+  const H1 = byName('OO대학병원 응급실 (가상)'), H2 = byName('OO시립병원 응급실 (가상)');
+  assert(/^HP-00[12]$/.test(H1.recipientId) && /^HP-00[12]$/.test(H2.recipientId), 'HP prefix');
+  const hc = G.candidates(off, 'hospital', {});
+  assert.strictEqual(hc.length, 2); assert(hc.every((c) => c.recommended), 'all hospitals pre-checked');
+  const hr = G.createRequest(off, { type: 'hospital', urgency: '긴급', summary: '가상: 50대 남성 의식 저하', detail: 'SECRET-H', targets: [H1.recipientId, H2.recipientId] });
+  assert.strictEqual(hr.ntfy.length, 2);
+  assert(hr.ntfy[0].body.title.includes('병원 응급실') && hr.ntfy[0].body.tags.includes('hospital'));
+  const vh = view('OO시립병원 응급실 (가상)').items.find((x) => x.requestId === hr.requestId);
+  assert.strictEqual(vh.detail, undefined, 'hospital is external: no internal memo');
+  assert.strictEqual(vh.requesterName, 'OO지구대', 'hospital sees org, not officer name');
+  G.recipientRespond(H2.token, hr.requestId, 'reject', '병상 없음');
+  G.recipientRespond(H1.token, hr.requestId, 'accept');
+  assert.strictEqual(view('OO시립병원 응급실 (가상)').items.find((x) => x.requestId === hr.requestId).mine.note, '병상 없음');
+  const card = G.dashboard(disp).items.find((x) => x.requestId === hr.requestId);
+  assert.strictEqual(card.targets.find((t) => t.recipientId === H2.recipientId).response.note, '병상 없음', 'reason on board');
+  throws(() => G.assign(disp, hr.requestId, H2.recipientId), /수락한 대상만/);
+  const ha = G.assign(disp, hr.requestId, H1.recipientId);
+  assert(ha.ntfy[0].body.message.startsWith('이송 확정'), 'hospital assign text');
+  G.recipientRespond(H1.token, hr.requestId, 'arrived');
+  G.recipientRespond(H1.token, hr.requestId, 'done');
+  assert.strictEqual(G.find_('REQUESTS', 'requestId', hr.requestId).status, 'done');
+  assert.strictEqual(G.getConfig().types.hospital.reasons.length, 4);
+}
+
 // 밀어내기: 수신자 휴대폰에는 최근 3건 알림만 (4번째부터 오래된 것 삭제 · 재알림 · 취소 안내 안 보냄)
 {
   const r42 = byName('42호');

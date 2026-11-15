@@ -66,6 +66,7 @@
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
   .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
   .actions button { padding: 14px 4px; }
+  .reasons { margin-top: 8px; } .reasons .row { margin-top: 6px; }
   .banner { padding: 10px 12px; border-radius: 8px; font-weight: 700; margin-top: 10px; }
   .banner.ok { background: #e3f5ea; color: var(--green); } .banner.info { background: #eef1f5; color: var(--muted); }
   .banner.blue { background: #e3edff; color: var(--blue); }
@@ -321,8 +322,10 @@ function options(el, list) { el.innerHTML = list.map((v) => `<option value="${es
 function telHref(s) { return 'tel:' + String(s || '').replace(/[^0-9+]/g, ''); }
 function respLabel(type, st) {
   const t = cfg.types[type] || {};
-  return { accept: t.accept, reject: t.reject, arrived: '현장 도착 · 처리 중', done: '처리 완료' }[st] || '응답 대기';
+  return { accept: t.accept, reject: t.reject, arrived: t.arrived || '현장 도착 · 처리 중', done: t.done || '처리 완료' }[st] || '응답 대기';
 }
+// 응답 + 사유 (예: '수용 불가 · 병상 없음')
+function respText(type, resp) { return respLabel(type, resp.status) + (resp.note ? ' · ' + resp.note : ''); }
 function typeName(type) { const t = cfg.types[type]; return t ? t.icon + ' ' + t.label : type; }
 // 브라우저 확인창 대신 버튼을 한 번 더 누르게 한다.
 function armed(b, text) {
@@ -498,7 +501,7 @@ function renderBoard(d) {
       const canAssign = canDispatch && active && st === 'accept' && !isAssigned;
       return `<div class="resp">
         <span class="name">${esc(t.name)} <span class="muted">${esc(t.org)}${t.status ? ' · ' + esc(t.status) : ''}</span></span>
-        <span class="st ${st}">${esc(respLabel(r.type, st))}${t.response ? ' <span class="muted">' + hhmm(t.response.at) + '</span>' : ''}</span>
+        <span class="st ${st}">${esc(t.response ? respText(r.type, t.response) : respLabel(r.type, st))}${t.response ? ' <span class="muted">' + hhmm(t.response.at) + '</span>' : ''}</span>
         ${isAssigned ? '<span class="tag assigned">배정됨</span>' : ''}
         ${canAssign ? `<button class="btn-sm b-green" data-act="assign" data-id="${esc(r.requestId)}" data-to="${esc(t.recipientId)}">${r.assignedTo ? '재배정' : '배정'}</button>` : ''}
       </div>`;
@@ -566,17 +569,27 @@ function setupNewForm() {
   $('nZone').onchange = loadCandidates;
 }
 
+// 요청 내용 예시 (외부 기관에 보이므로 이름 · 주민번호 같은 개인정보는 쓰지 않게)
+const SUM_HINT = {
+  patrol: '예: 주취자 소란 현장 지원 필요',
+  interpreter: '예: 외국인 교통사고 당사자 진술 통역 필요 (현장 · 약 30분)',
+  finance: '예: 보이스피싱 피해 계좌 지급정지 협조 요청',
+  agency: '예: 자해 우려자 위기 개입 지원 요청',
+  hospital: '예: 50대 남성 · 의식 저하 · 호흡 있음 · 보호자 없음 (이름 · 주민번호 쓰지 말 것)',
+};
 let candSeq = 0;
 async function loadCandidates() {
   const type = checked('nType')[0];
   $('nLangBox').classList.toggle('hidden', type !== 'interpreter');
+  $('nSum').placeholder = SUM_HINT[type] || SUM_HINT.interpreter;
   const seq = ++candSeq;
   $('nCands').innerHTML = '<p class="muted">대상 불러오는 중…</p>';
   try {
     const list = await call('candidates', token, type, { zone: $('nZone').value, urgency: checked('nUrg')[0], language: $('nLang').value });
     if (seq !== candSeq) return;
     $('nCandInfo').textContent = type === 'patrol' ? '(가용 · 담당 구역 · 진행 임무 기준 추천 — 최종 배정은 상황관리자가 결정)'
-      : type === 'interpreter' ? '(선택한 언어 가능 통역원 일괄 호출)' : '';
+      : type === 'interpreter' ? '(선택한 언어 가능 통역원 일괄 호출)'
+      : type === 'hospital' ? '(여러 응급실에 동시에 수용 가능 여부 문의 → 수용 가능한 곳 중 하나로 이송 결정)' : '';
     $('nCands').innerHTML = list.map((c) => `
       <label class="cand"><input type="checkbox" name="nCand" value="${esc(c.recipientId)}"${c.recommended ? ' checked' : ''}>
         <span><b>${esc(c.name)}</b>${c.recommended && type === 'patrol' ? '<span class="badge">추천</span>' : ''}
@@ -686,8 +699,9 @@ $('uTable').onclick = (ev) => {
 };
 
 const RC_DETAIL = { patrol: ['상세', '예: 순찰차 · 2인'], interpreter: ['가능 언어 (쉼표로 구분)', '예: 영어, 중국어'],
-  finance: ['상세', '예: 공식 협조 창구'], agency: ['상세', '예: 구조 · 구급'] };
-const RC_NAME = { patrol: (n) => '순찰차 ' + n, interpreter: (n) => '통역원 ' + n, finance: (n) => '금융기관 ' + n, agency: (n) => '유관기관 ' + n };
+  finance: ['상세', '예: 공식 협조 창구'], agency: ['상세', '예: 구조 · 구급'], hospital: ['상세', '예: 권역응급의료센터 · 소아 진료 가능'] };
+const RC_NAME = { patrol: (n) => '순찰차 ' + n, interpreter: (n) => '통역원 ' + n, finance: (n) => '금융기관 ' + n, agency: (n) => '유관기관 ' + n,
+  hospital: (n) => '응급실 ' + n };
 
 // 유형별 묶음: 순번 · 이름 · 상세 · 개인 링크 · 수정 / 삭제
 function renderRcTable() {
@@ -854,12 +868,14 @@ function renderRecipient(d) {
     let body = '';
     if (open) body = `<div class="actions">
         <button class="b-green" data-id="${esc(r.requestId)}" data-st="accept">${esc(t.accept)}</button>
-        <button class="b-red" data-id="${esc(r.requestId)}" data-st="reject">${esc(t.reject)}</button></div>
-        ${mine ? `<div class="banner info">내 응답: <span class="st ${mine}">${esc(respLabel(r.type, mine))}</span> · 배정을 기다리는 중 (바꿀 수 있음)</div>` : ''}`;
-    else if (r.assignedToMe && r.status === 'assigned') body = `<div class="banner blue">✅ 나에게 배정되었습니다</div>
-        <div class="actions"><button class="b-amber" data-id="${esc(r.requestId)}" data-st="arrived">${mine === 'arrived' ? '✔ 현장 도착 · 처리 중' : '현장 도착 · 처리 시작'}</button>
-        <button class="b-green" data-id="${esc(r.requestId)}" data-st="done">처리 완료</button></div>`;
-    else if (r.assignedToMe && r.status === 'done') body = '<div class="banner ok">✅ 처리 완료</div>';
+        <button class="b-red" data-id="${esc(r.requestId)}" data-st="reject"${t.reasons ? ' data-ask="1"' : ''}>${esc(t.reject)}</button></div>
+        ${t.reasons ? `<div class="reasons${reasonOpen.includes(r.requestId) ? '' : ' hidden'}"><div class="muted">${esc(t.reject)} 사유를 고르세요</div>
+          <div class="row">${t.reasons.map((x) => `<button class="btn-sm b-red" data-id="${esc(r.requestId)}" data-st="reject" data-note="${esc(x)}">${esc(x)}</button>`).join('')}</div></div>` : ''}
+        ${mine ? `<div class="banner info">내 응답: <span class="st ${mine}">${esc(respText(r.type, r.mine))}</span> · ${r.type === 'hospital' ? '이송 결정' : '배정'}을 기다리는 중 (바꿀 수 있음)</div>` : ''}`;
+    else if (r.assignedToMe && r.status === 'assigned') body = `<div class="banner blue">✅ ${r.type === 'hospital' ? '이 병원으로 환자 이송이 결정되었습니다' : '나에게 배정되었습니다'}</div>
+        <div class="actions"><button class="b-amber" data-id="${esc(r.requestId)}" data-st="arrived">${mine === 'arrived' ? '✔ ' + esc(respLabel(r.type, 'arrived')) : esc(r.type === 'hospital' ? '환자 도착' : '현장 도착 · 처리 시작')}</button>
+        <button class="b-green" data-id="${esc(r.requestId)}" data-st="done">${esc(respLabel(r.type, 'done'))}</button></div>`;
+    else if (r.assignedToMe && r.status === 'done') body = `<div class="banner ok">✅ ${esc(respLabel(r.type, 'done'))}</div>`;
     else if (r.status === 'cancelled') body = '<div class="banner info">요청이 취소되었습니다</div>';
     else body = '<div class="banner info">다른 대상이 배정되었거나 종료된 요청입니다. 감사합니다.</div>';
     return `<div class="card ${r.urgency === '긴급' ? 'urgent' : ''} ${open && !mine ? 'pending' : ''} ${fresh.includes(r.requestId) ? 'new' : ''}">
@@ -901,16 +917,28 @@ $('rAlarm').onclick = () => {
   $('rAlarm').textContent = `🚨 응답 대기 ${pendingIds.length}건 — 응답 버튼을 눌러 주세요 (소리 꺼짐)`;
   stopNtfyAlarm(pendingIds);
 };
+let reasonOpen = [];   // 사유 버튼을 펼친 요청번호
 $('rReqs').onclick = async (ev) => {
   const b = ev.target.closest('button[data-st]');
   if (!b) return;
   if (b.dataset.st === 'done' && !armed(b, '한 번 더 누르면 완료')) return;
   stopNtfyAlarm([b.dataset.id]);
-  const all = b.parentNode.querySelectorAll('button');
+  // 사유가 있는 유형(병원 '수용 불가'): 먼저 사유 버튼을 펼친다
+  if (b.dataset.ask) {
+    const box = b.closest('.card').querySelector('.reasons');
+    if (box) {
+      const on = box.classList.toggle('hidden') === false;   // 4초마다 다시 그려도 펼친 상태 유지
+      reasonOpen = on ? reasonOpen.concat(b.dataset.id) : reasonOpen.filter((x) => x !== b.dataset.id);
+      return;
+    }
+  }
+  const all = b.closest('.card').querySelectorAll('button[data-st]');
   all.forEach((x) => (x.disabled = true));
   try {
-    await call('recipientRespond', rtoken, b.dataset.id, b.dataset.st, '');
-    toast(`'${respLabel(rMe.type, b.dataset.st)}' 응답을 보냈습니다.`);
+    const note = b.dataset.note || '';
+    await call('recipientRespond', rtoken, b.dataset.id, b.dataset.st, note);
+    reasonOpen = reasonOpen.filter((x) => x !== b.dataset.id);
+    toast(`'${respLabel(rMe.type, b.dataset.st)}${note ? ' · ' + note : ''}' 응답을 보냈습니다.`);
     refreshRecipient();
   } catch (e) { if (!handleAuthError(e)) toast(errMsg(e)); all.forEach((x) => (x.disabled = false)); }
 };
