@@ -30,6 +30,7 @@
 
 ## 코드를 바꿀 때 (배포까지 Claude 가 함 — 사용자가 요청함)
 
+0. ⚠ **Index.html `<script>` 안에서는 문자열에도 `//` 를 쓰지 말 것** — Apps Script 가 `//` 뒤를 주석으로 잘라 낸다 (URL 은 `'https:\/\/…'`). HTML 주석 `<!-- -->` 도 지워짐. `node --check` 로는 못 잡음 → `tests/test_server.js` 의 검사가 잡음
 1. 수정 → 문법: `.gs` 는 node 가 확장자를 거부 → `cp Code.gs "$TEMP/cg.js" && node --check "$TEMP/cg.js"`. Index.html 은 `<script>` 부분만 뽑아 `node --check`
 2. 서버 시험: `node tests/test_server.js` → `ISOLATION OK` · `ALL TESTS PASSED`. 기능을 넣으면 시험도 추가
 3. 화면 확인(필요하면): 가짜 `google.script.run` 을 붙인 Index.html 을 `python -m http.server --bind 127.0.0.1` 로 띄워 Chrome 으로 확인. 실제 웹앱 로그인은 PIN 입력이라 Claude 는 못 함 → 사용자에게
@@ -42,7 +43,7 @@
        그래도 저장 버튼이 꺼져 있으면 `editor.focus()` 후 실제 키 입력(공백) → 저장 → 공백 지우기 → 저장 (최종 내용이 커밋과 같은지 비교)
    - 파일 목록의 'Index.html 저장되지 않음' 라벨은 믿을 수 없음 (저장돼도 남음). **배포 후 /exec fetch 확인이 최종 판단**
 6. **배포**: 배포 버튼 → `find` 로 '배포 관리' 메뉴를 찾아 누름 (**좌표로 누르지 말 것** — 창 크기에 따라 '새 배포' 가 눌림. 새 배포는 주소가 바뀜) → 수정(연필) → 버전 '새 버전' → 설명 → 배포 → "버전 N" · 같은 배포 ID 확인
-7. **배포 확인**: /exec 탭에서 `fetch(location.href)` 결과에 새 코드 문자열이 있는지 확인 (배포 직후에는 이전 버전이 올 수 있음 — 1분 넘게 걸린 적도 있음 → `?v=<시각>` 붙여 다시) (웹앱 화면은 다른 출처 iframe 이라 find/read_page 로 안 보임)
+7. **배포 확인**: /exec 탭에서 `fetch(location.href)` 결과에 새 코드 문자열이 있는지 확인 + 실제로 `/exec` 를 열어 **로그인 화면이 나오는지** (서버가 바꾼 스크립트의 문법 오류는 '불러오는 중…' 으로만 보임. `goog.script.init("…")` 의 `userHtml` 을 꺼내 `new Function` 으로 검사 가능) (배포 직후에는 이전 버전이 올 수 있음 — 1분 넘게 걸린 적도 있음 → `?v=<시각>` 붙여 다시) (웹앱 화면은 다른 출처 iframe 이라 find/read_page 로 안 보임)
 8. 이 파일 '배포 기록' 과 README '개발 진행 기록' 갱신
 
 ### 브라우저 · 휴대폰 점검 요령
@@ -71,6 +72,7 @@
 | 9 | 19:40 | `b32643a` | `CONFIG.REGIONS` 9개 (서울 4 · 경기 4 · 인천), `TYPES.*.regional` (hospital · interpreter). `candidates`: 요청 권역 있으면 `!x.zone` 또는 권역 일치만. 요청 권역은 목록 밖이면 '' (전체). 수신자 권역은 목록만 · 쉼표 여러 개 가능. 화면: 신규 요청 `nRegion` · 관리자 `rcRegion` |
 | 10 | 20:22 | `dd7572c` | 관리자 수신자 표에 ntfy 토픽 · '토픽 복사' (`data-rctopic`, `copyText`). Index.html 만 변경. 배포 후 /exec 반영까지 1분 넘게 걸림 (편집기 다시 열어 내용 확인 후 기다리니 반영) |
 | 11 | 20:32 | `da06677` | ntfy 복원 파일 버튼: `ntfyRestoreJson` · `downloadNtfyRestore` (관리자 `data-rcfile`, 수신자 `btnRestoreFile`). Apps Script iframe 은 `allow-downloads` 있음 → blob 다운로드 가능. Index.html 만 변경 |
+| 12 | 21:04 | `d26046f` | **고침**: 버전 11 부터 웹앱이 '불러오는 중…' 에서 멈춤. HtmlService 가 `<script>` 안 `//` 뒤를 주석으로 지워 `'https://ntfy.sh'` → `'https:` (문법 오류). `'https:\/\/ntfy.sh'` 로 고치고 시험 추가 |
 
 ## 현재 데이터 · 휴대폰 상태 (2026-11-15 15시 무렵)
 
