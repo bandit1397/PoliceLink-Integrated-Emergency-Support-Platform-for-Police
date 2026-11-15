@@ -35,4 +35,9 @@
 - 버전 3 (2026-11-15 14:13, 커밋 `405be0e`): 관리자 수신자 화면 = 유형별 순번 목록 · ＋ 추가(`nextRecipientSeq`) · 삭제(`deleteRecipient`, active=D 소프트 삭제 · 토큰 교체 · 번호 재사용 안 함). Code.gs · Index.html 둘 다 교체
   - 배포 메뉴는 창 크기에 따라 위치가 바뀜 → 좌표 대신 find 로 '배포 관리' 를 찾아 누를 것 (한 번 '새 배포' 가 열려 취소함)
   - UI 확인: 가짜 google.script.run 을 붙인 Index.html 을 127.0.0.1 로 띄워 확인 (실제 로그인은 PIN 이 필요해 사용자만 가능)
+- 버전 4 (2026-11-15 14:27, 커밋 `bbcaaab`): 직원 본인 PIN 변경(`changePin`, 화면 위 'PIN 변경') · 편집기용 `resetAdminPin`
+  - admin PIN 은 사용자 요청으로 지정값으로 바꿈: 편집기에서만 임시 함수 `tmpSetAdminPin` 을 붙여 실행 → 바로 삭제 · 저장 (저장소 · 배포 버전에 PIN 없음). 값은 `accounts.local.txt`
+  - 주의: 편집기 Ctrl+S 는 열려 있는 파일만 저장될 수 있음 → 'Drive에 프로젝트 저장' 버튼(비활성 = 저장 완료)으로 확인.
+    파일 목록의 '저장되지 않음' 라벨은 저장 후에도 남는 경우가 있음. 배포 후 /exec 를 fetch 해서 새 코드 문자열이 있는지 확인함
+  - 이 창이 가려지면 스크린샷이 시간 초과 → javascript_tool 로 DOM 확인
 - **아직 안 함**: 로그인 후 화면 흐름 · 휴대폰 ntfy 시험
