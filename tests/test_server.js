@@ -121,7 +121,7 @@ const created = G.createRequest(off, { type: 'patrol', urgency: '긴급', locati
 assert.strictEqual(created.ntfy.length, 2, 'FN-001 filtered out (type mismatch)');
 const n0 = created.ntfy[0].body;
 assert.strictEqual(n0.priority, 5); assert.strictEqual(n0.sequence_id, created.requestId);
-assert(!('click' in n0), 'no click'); assert(n0.actions[0].url.endsWith('/exec') && !n0.actions[0].url.includes('?r='), 'no token in url');
+assert(!('click' in n0), 'no click'); assert(/\/exec\?to=PT-00[12]$/.test(n0.actions[0].url) && !n0.actions[0].url.includes('?r='), 'url has recipient id, no token: ' + n0.actions[0].url);
 assert(!JSON.stringify(n0).includes('주취자') && !JSON.stringify(n0).includes('A구역'), 'no case detail in ntfy');
 const id = created.requestId;
 const reqRow = G.find_('REQUESTS', 'requestId', id);

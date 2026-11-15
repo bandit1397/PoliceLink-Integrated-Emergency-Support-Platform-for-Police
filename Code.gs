@@ -565,7 +565,7 @@ function ntfyAlarm_(req, rc, prefix) {
   if (!rc || !rc.topic) return null;
   const t = CONFIG.TYPES[req.type];
   const urgent = req.urgency === '긴급';
-  return ntfyBody_(rc.topic, req, {
+  return ntfyBody_(rc, req, {
     title: `${prefix}[${req.urgency}] ${t.label} 요청`,
     message: `요청 ${req.requestId}. 이 알림을 누르면 알람이 멈춥니다.`,
     priority: urgent ? 5 : 4,
@@ -577,7 +577,7 @@ function ntfyAlarm_(req, rc, prefix) {
 function ntfyInfo_(req, rc, text, priority) {
   if (!rc || !rc.topic) return null;
   const t = CONFIG.TYPES[req.type];
-  return ntfyBody_(rc.topic, req, {
+  return ntfyBody_(rc, req, {
     title: `${t.label} 요청 ${req.requestId}`,
     message: text,
     priority: priority,
@@ -585,11 +585,13 @@ function ntfyInfo_(req, rc, text, priority) {
   });
 }
 
-function ntfyBody_(topic, req, m) {
+function ntfyBody_(rc, req, m) {
   const url = appUrl_();
-  const body = Object.assign({ topic: topic, sequence_id: req.requestId }, m);
-  // click 은 넣지 않는다. 알림 본문 → ntfy 화면(알람 멈춤) → 버튼 → 웹앱. 웹앱 주소에 개인 토큰은 넣지 않는다.
-  if (url) body.actions = [{ action: 'view', label: 'PoliceLink 열기', url: url, clear: true }];
+  const body = Object.assign({ topic: rc.topic, sequence_id: req.requestId }, m);
+  // click 은 넣지 않는다. 알림 본문 → ntfy 화면(알람 멈춤) → 버튼 → 웹앱.
+  // 웹앱 주소에 개인 토큰은 넣지 않고(ntfy.sh 에 남으므로), 비밀이 아닌 수신자 번호만 붙인다(?to=IN-005).
+  // 화면은 ?to= 가 있으면 관리자 로그인이 남아 있어도 그 브라우저에 등록된 수신자 응답 화면을 연다.
+  if (url) body.actions = [{ action: 'view', label: 'PoliceLink 열기', url: url + '?to=' + encodeURIComponent(rc.recipientId), clear: true }];
   return { server: CONFIG.NTFY_SERVER, body: body };
 }
 

@@ -123,6 +123,13 @@
   </div>
 
   <section id="login" class="hidden">
+    <div class="card hidden" id="needLink" style="border:2px solid var(--red)">
+      <h2>📱 이 브라우저에는 수신자 등록이 없습니다</h2>
+      <p>알림은 <b id="needLinkWho"></b> 에게 온 것입니다. 응답 화면을 열려면 관리자에게 받은 <b>개인 링크</b>를
+        <b>이 휴대폰의 같은 브라우저</b>에서 한 번 여세요. 그 뒤로는 알림의 <b>PoliceLink 열기</b>만 눌러도 바로 응답 화면이 열립니다.</p>
+      <p class="muted">개인 링크를 열었는데도 이 안내가 나오면, 알림 버튼이 다른 브라우저(예: 삼성 인터넷 ↔ Chrome)로 열리는 것입니다.
+        휴대폰 설정 → 애플리케이션 → 기본 앱 → 브라우저 앱을, 개인 링크를 연 브라우저로 맞추세요.</p>
+    </div>
     <div class="card">
       <h2>직원 로그인</h2>
       <label class="f">아이디</label>
@@ -388,10 +395,17 @@ $('btnLogin').onclick = async () => {
   } catch (e) { toast(errMsg(e)); } finally { b.disabled = false; }
 };
 $('lPin').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('btnLogin').click(); });
+// 직원 로그아웃은 직원 로그인만 지운다 (같은 휴대폰에 등록된 수신자 링크는 유지).
+// 수신자 화면에서는 '등록 해제' — 이 브라우저의 수신자 링크만 지운다.
 $('btnLogout').onclick = async () => {
   if (!armed($('btnLogout'), '한 번 더')) return;
-  if (token) call('logout', token).catch(() => {});
-  token = ''; rtoken = ''; save('pl_token', ''); save('pl_rtoken', '');
+  if (mode === 'recipient') {
+    rtoken = ''; save('pl_rtoken', '');
+    toast('이 브라우저의 수신자 등록을 해제했습니다. 다시 받으려면 개인 링크를 여세요.');
+  } else {
+    if (token) call('logout', token).catch(() => {});
+    token = ''; save('pl_token', '');
+  }
   showLogin();
 };
 $('btnPin').onclick = () => {
@@ -417,8 +431,10 @@ $('btnPinSave').onclick = async () => {
 function enterStaff(user) {
   me = user; mode = 'staff'; hideAll(); seen = null;
   $('who').innerHTML = `${esc(user.name)}<br>${esc(cfg.roles[user.role])}`;
+  $('btnLogout').textContent = '로그아웃';
   $('btnLogout').classList.remove('hidden');
   $('btnPin').classList.remove('hidden');
+  $('needLink').classList.add('hidden');
   $('nav').classList.remove('hidden');
   $('navAdmin').classList.toggle('hidden', user.role !== 'admin');
   setupNewForm();
@@ -778,10 +794,13 @@ $('btnAudit').onclick = loadAudit;
  * 수신자 화면 (개인 링크)
  * ==================================================================== */
 let rMe = null;
+let wantTo = '';   // 알림 버튼으로 열렸을 때 (?to=IN-005) 그 알림을 받은 수신자 번호
 function enterRecipient() {
   mode = 'recipient'; hideAll(); seen = null;
   $('recipient').classList.remove('hidden');
+  $('btnLogout').textContent = '등록 해제';
   $('btnLogout').classList.remove('hidden');
+  $('btnPin').classList.add('hidden'); $('pinBox').classList.add('hidden');
   pollTimer = setInterval(() => { if (!document.hidden) refreshRecipient(); }, POLL_MS);
   refreshRecipient();
 }
@@ -799,6 +818,7 @@ function renderRecipient(d) {
   rMe = d.me;
   $('who').innerHTML = `${esc(rMe.name)}<br>${esc(rMe.org)}`;
   if (first) {
+    if (wantTo && wantTo !== rMe.recipientId) toast(`⚠ 이 알림은 ${wantTo} 에게 온 것인데, 이 브라우저는 ${rMe.name}(${rMe.recipientId}) 로 등록되어 있습니다. 해당 개인 링크를 여세요.`);
     $('rPush').classList.toggle('hidden', !!load('pl_ntfy_done_' + rMe.recipientId, false));
     $('rSubscribe').href = d.ntfy.link;
     $('rTopic').textContent = '구독 버튼이 안 열리면 ntfy 앱 ＋ 에서 이 토픽을 입력: ' + d.ntfy.topic;
@@ -912,7 +932,15 @@ function getParam() {
     if (!cfg.ready) { $('boot').textContent = '관리자가 아직 설치(setup)를 하지 않았습니다. README 의 설치 절차를 확인하세요.'; return; }
     const p = await getParam();
     if (p.r) { rtoken = p.r; save('pl_rtoken', rtoken); }
+    wantTo = p.to || '';
     if (rtoken) return enterRecipient();
+    // 알림 버튼(?to=)으로 열었는데 이 브라우저에 수신자 등록이 없으면: 관리자 화면 대신 안내
+    if (wantTo) {
+      showLogin();
+      $('needLink').classList.remove('hidden');
+      $('needLinkWho').textContent = wantTo;
+      return;
+    }
     if (token) {
       try { return enterStaff(await call('whoami', token)); }
       catch (e) { token = ''; save('pl_token', ''); }
