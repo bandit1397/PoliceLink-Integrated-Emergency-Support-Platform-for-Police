@@ -226,6 +226,44 @@ assert(!JSON.stringify(G.listUsers(admin)).includes('pinHash'));
 assert(/^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d$/.test(sheets.REQUESTS.data[1][1]), 'time format ' + sheets.REQUESTS.data[1][1]);
 assert.strictEqual(G.find_('REQUESTS', 'requestId', id).createdAt, Date.parse('2026-11-15T10:00:00+09:00'));
 
+// 순번 · 추가 · 삭제
+{
+  assert.strictEqual(G.nextRecipientSeq(admin, 'interpreter'), 5);
+  throws(() => G.nextRecipientSeq(disp, 'interpreter'), /권한/);
+  const add5 = G.saveRecipient(admin, { type: 'interpreter', name: '통역원 5', detail: '태국어' });
+  assert.strictEqual(add5.recipientId, 'IN-005');
+  let list = G.listRecipients(admin);
+  const in5 = list.find((x) => x.recipientId === 'IN-005');
+  assert.strictEqual(in5.seq, 5);
+  assert.deepStrictEqual([...list.filter((x) => x.type === 'interpreter').map((x) => x.seq)], [1, 2, 3, 4, 5], 'sorted by seq');
+  assert(G.recipientView(in5.token));
+  // 유형 바꾸기 시도 → 유형 유지
+  G.saveRecipient(admin, { recipientId: 'IN-005', type: 'finance', name: '통역원 5', detail: '태국어' });
+  assert.strictEqual(G.find_('RECIPIENTS', 'recipientId', 'IN-005').type, 'interpreter');
+  // 삭제 → 링크 무효, 목록 · 후보 제외, 번호 재사용 안 함
+  G.deleteRecipient(admin, 'IN-005');
+  throws(() => G.recipientView(in5.token), /RECIPIENT_INVALID/);
+  list = G.listRecipients(admin);
+  assert(!list.some((x) => x.recipientId === 'IN-005'));
+  assert(!G.candidates(off, 'interpreter', { language: '태국어' }).length);
+  throws(() => G.deleteRecipient(admin, 'IN-005'), /이미 삭제/);
+  throws(() => G.saveRecipient(admin, { recipientId: 'IN-005', type: 'interpreter', name: 'x' }), /삭제된 수신자/);
+  assert.strictEqual(G.nextRecipientSeq(admin, 'interpreter'), 6, 'no reuse');
+  assert.strictEqual(G.saveRecipient(admin, { type: 'interpreter', name: '통역원 6' }).recipientId, 'IN-006');
+  throws(() => G.deleteRecipient(disp, 'IN-006'), /권한/);
+  // 배정 중이면 삭제 거부
+  const q = G.createRequest(disp, { type: 'interpreter', urgency: '보통', summary: '가상', targets: ['IN-006'] });
+  const t6 = G.listRecipients(admin).find((x) => x.recipientId === 'IN-006').token;
+  G.recipientRespond(t6, q.requestId, 'accept');
+  G.assign(disp, q.requestId, 'IN-006');
+  throws(() => G.deleteRecipient(admin, 'IN-006'), /처리 중인 배정/);
+  G.closeRequest(disp, q.requestId, 'done');
+  G.deleteRecipient(admin, 'IN-006');
+  // 지난 요청의 상황판에는 이름이 그대로 남음
+  assert.strictEqual(G.dashboard(admin).items.find((r) => r.requestId === q.requestId).targets[0].name, '통역원 6');
+  assert(G.listAudit(admin, 50).some((a) => a.action === 'recipient_delete'));
+}
+
 // 기관별 분리: 유형마다 요청 1건씩 → 각 수신자는 자기에게 온 것만, 다른 수신자 이름 · 내부 메모 없음
 G.clearRequests();
 const all = G.listRecipients(admin);

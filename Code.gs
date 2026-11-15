@@ -325,15 +325,46 @@ function setPatrolStatus(token, recipientId, status) {
   return true;
 }
 
-/** 수신자 목록 (직원 공통 · 토큰/토픽 제외) */
+/** 수신자 목록 (직원 공통 · 토큰/토픽 제외 · 삭제된 수신자 제외). seq = 유형별 순번 (IN-004 → 4) */
 function listRecipients(token) {
   const sess = auth_(token);
-  return rows_('RECIPIENTS').map((x) => {
+  return rows_('RECIPIENTS').filter((x) => x.active !== 'D').map((x) => {
     const o = stripRow_(x);
+    o.seq = recipientSeq_(x.recipientId);
     if (sess.role !== 'admin') { delete o.token; delete o.topic; delete o.contact; }
     else o.link = recipientLink_(x.token);
     return o;
+  }).sort((a, b) => Object.keys(CONFIG.TYPES).indexOf(a.type) - Object.keys(CONFIG.TYPES).indexOf(b.type) || a.seq - b.seq);
+}
+
+/** 유형별 다음 순번 (삭제된 번호도 다시 쓰지 않음) — 관리자 화면의 '＋ 추가' 이름 제안용 */
+function nextRecipientSeq(token, type) {
+  auth_(token, ['admin']);
+  if (!CONFIG.TYPES[type]) throw new Error('잘못된 유형입니다.');
+  return recipientSeq_(nextRecipientId_(type));
+}
+
+/**
+ * 수신자 삭제: 링크를 즉시 무효로 하고 목록 · 알림 대상에서 뺀다.
+ * 시트 행은 지우지 않는다 (지난 요청 · 응답 · 감사기록에 이름이 남도록, 순번도 다시 쓰지 않도록).
+ */
+function deleteRecipient(token, recipientId) {
+  const sess = auth_(token, ['admin']);
+  let name = '';
+  withLock_(() => {
+    const r = find_('RECIPIENTS', 'recipientId', recipientId);
+    if (!r || r.active === 'D') throw new Error('이미 삭제되었거나 없는 수신자입니다.');
+    const busy = rows_('REQUESTS', true).some((q) => q.status === 'assigned' && q.assignedTo === recipientId);
+    if (busy) throw new Error('처리 중인 배정 요청이 있어 삭제할 수 없습니다. 완료 · 취소 후 삭제하세요.');
+    name = r.name;
+    update_('RECIPIENTS', r, { active: 'D', token: randomToken_(), status: '' });
   });
+  audit_(sess, 'recipient_delete', recipientId, 'ok', name);
+  return true;
+}
+
+function recipientSeq_(id) {
+  return Number(String(id).split('-')[1]) || 0;
 }
 
 /* ======================================================================
@@ -394,6 +425,9 @@ function saveRecipient(token, data) {
   withLock_(() => {
     const r = id && find_('RECIPIENTS', 'recipientId', id);
     if (r) {
+      if (r.active === 'D') throw new Error('삭제된 수신자는 수정할 수 없습니다. 새로 추가하세요.');
+      patch.type = r.type; // 유형은 바꾸지 않음 (번호 체계 유지)
+      if (r.type !== 'patrol') patch.status = '';
       if (data.newToken) patch.token = randomToken_();
       update_('RECIPIENTS', r, patch);
     } else {

@@ -187,23 +187,24 @@
     </div>
 
     <div id="a-recips" class="hidden">
-      <div class="card">
-        <h2>수신자 추가 · 수정</h2>
-        <input type="hidden" id="rcId">
+      <p class="muted">유형마다 <b>＋ 추가</b>를 누르면 마지막 순번 다음 번호로 만들어지고 개인 링크가 바로 발급됩니다.
+        <b>삭제</b>하면 링크가 즉시 무효가 되고 알림 대상에서 빠집니다 (지난 기록은 남고, 번호는 다시 쓰지 않음).</p>
+      <div class="card hidden" id="rcForm">
+        <h2 id="rcFormTitle">수신자 추가</h2>
+        <input type="hidden" id="rcId"><input type="hidden" id="rcType">
         <div class="grid2">
-          <div><label class="f">유형</label><select id="rcType"></select></div>
-          <div><label class="f">이름 (예: 41호 · 통역원 A)</label><input type="text" id="rcName"></div>
+          <div><label class="f">이름</label><input type="text" id="rcName"></div>
           <div><label class="f">소속 기관</label><input type="text" id="rcOrg"></div>
-          <div><label class="f">상세 (통역원: 언어를 쉼표로)</label><input type="text" id="rcDetail" placeholder="예: 영어, 중국어"></div>
-          <div><label class="f">담당 구역 (순찰차)</label><input type="text" id="rcZone"></div>
+          <div><label class="f" id="rcDetailLabel">상세</label><input type="text" id="rcDetail"></div>
+          <div class="rc-patrol"><label class="f">담당 구역</label><input type="text" id="rcZone" placeholder="예: A구역"></div>
           <div><label class="f">연락처 (관리자만 보임)</label><input type="tel" id="rcContact"></div>
-          <div><label class="f">상태 (순찰차)</label><select id="rcStatus"></select></div>
-          <div><label class="f">사용</label><select id="rcActive"><option value="Y">사용</option><option value="N">중지</option></select></div>
+          <div class="rc-patrol"><label class="f">상태</label><select id="rcStatus"></select></div>
+          <div><label class="f">사용</label><select id="rcActive"><option value="Y">사용</option><option value="N">일시 중지</option></select></div>
         </div>
-        <div class="row"><button class="b-blue" id="btnRcSave">저장</button><button class="btn-line" id="btnRcClear">새로 입력</button></div>
+        <div class="row"><button class="b-blue" id="btnRcSave">저장</button><button class="btn-line" id="btnRcClear">닫기</button></div>
         <div id="rcLinkBox" class="hidden" style="margin-top:12px"></div>
       </div>
-      <div class="card scroll"><table id="rcTable"></table></div>
+      <div id="rcGroups"></div>
     </div>
 
     <div id="a-audit" class="hidden">
@@ -628,45 +629,96 @@ $('uTable').onclick = (ev) => {
   if (p) { if (!armed(p, '한 번 더')) return; fillUser(users.find((u) => u.userId === p.dataset.upin)); saveUser(true); }
 };
 
+const RC_DETAIL = { patrol: ['상세', '예: 순찰차 · 2인'], interpreter: ['가능 언어 (쉼표로 구분)', '예: 영어, 중국어'],
+  finance: ['상세', '예: 공식 협조 창구'], agency: ['상세', '예: 구조 · 구급'] };
+const RC_NAME = { patrol: (n) => '순찰차 ' + n, interpreter: (n) => '통역원 ' + n, finance: (n) => '금융기관 ' + n, agency: (n) => '유관기관 ' + n };
+
+// 유형별 묶음: 순번 · 이름 · 상세 · 개인 링크 · 수정 / 삭제
 function renderRcTable() {
-  $('rcTable').innerHTML = '<tr><th>ID</th><th>유형</th><th>이름</th><th>소속 · 상세</th><th>구역 · 상태</th><th>사용</th><th></th></tr>' + recips.map((x) =>
-    `<tr><td>${esc(x.recipientId)}</td><td>${typeName(x.type)}</td><td>${esc(x.name)}</td><td>${esc(x.org)}<br><span class="muted">${esc(x.detail)}</span></td>
-     <td>${esc(x.zone)} ${esc(x.status)}</td><td>${x.active === 'Y' ? '사용' : '중지'}</td>
-     <td><button class="btn-sm btn-line" data-rcedit="${esc(x.recipientId)}">수정</button> <button class="btn-sm btn-line" data-rclink="${esc(x.recipientId)}">개인 링크</button></td></tr>`).join('');
+  $('rcGroups').innerHTML = Object.keys(cfg.types).map((k) => {
+    const list = recips.filter((x) => x.type === k);
+    return `<div class="card scroll">
+      <div class="req-head"><h2 style="margin:0">${typeName(k)} <span class="muted">${list.length}곳</span></h2>
+        <button class="btn-sm b-green" data-rcadd="${k}">＋ 추가</button></div>
+      <table><tr><th>순번</th><th>이름 · 상세</th><th>개인 링크</th><th></th></tr>
+      ${list.map((x) => `<tr${x.active === 'Y' ? '' : ' style="opacity:.55"'}>
+        <td><b>${x.seq}</b><br><span class="muted">${esc(x.recipientId)}</span></td>
+        <td><b>${esc(x.name)}</b>${x.active === 'Y' ? '' : ' <span class="tag">일시 중지</span>'}<br>
+          <span class="muted">${esc(x.org)}${x.detail ? ' · ' + esc(x.detail) : ''}${x.zone ? ' · ' + esc(x.zone) : ''}${x.status ? ' · ' + esc(x.status) : ''}</span></td>
+        <td style="min-width:200px"><input type="text" readonly value="${esc(x.link)}" onclick="this.select()" style="font-size:12px;padding:6px">
+          <button class="btn-sm btn-line" data-rccopy="${esc(x.recipientId)}" style="margin-top:4px">복사</button></td>
+        <td style="white-space:nowrap"><button class="btn-sm btn-line" data-rcedit="${esc(x.recipientId)}">수정</button>
+          <button class="btn-sm b-red" data-rcdel="${esc(x.recipientId)}">삭제</button></td></tr>`).join('')
+        || '<tr><td colspan="4" class="muted">등록된 대상이 없습니다. ＋ 추가를 누르세요.</td></tr>'}
+      </table></div>`;
+  }).join('');
 }
-function fillRc(x) {
-  options($('rcType'), Object.keys(cfg.types).map((k) => [k, typeName(k)]));
-  options($('rcStatus'), [['', '-']].concat(cfg.patrolStatus.map((s) => [s, s])));
-  $('rcId').value = x ? x.recipientId : ''; $('rcType').value = x ? x.type : 'patrol'; $('rcType').disabled = !!x;
-  $('rcName').value = x ? x.name : ''; $('rcOrg').value = x ? x.org : ''; $('rcDetail').value = x ? x.detail : '';
-  $('rcZone').value = x ? x.zone : ''; $('rcContact').value = x ? x.contact : ''; $('rcStatus').value = x ? x.status : '';
+function fillRc(x, type, seq) {
+  type = x ? x.type : type;
+  options($('rcStatus'), cfg.patrolStatus.map((s) => [s, s]));
+  $('rcForm').classList.remove('hidden');
+  $('rcLinkBox').classList.add('hidden');
+  $('rcFormTitle').textContent = x ? `${typeName(type)} ${x.seq}번 수정` : `${typeName(type)} ${seq}번 추가`;
+  $('rcId').value = x ? x.recipientId : ''; $('rcType').value = type;
+  $('rcName').value = x ? x.name : RC_NAME[type](seq);
+  $('rcOrg').value = x ? x.org : ''; $('rcDetail').value = x ? x.detail : '';
+  $('rcDetailLabel').textContent = RC_DETAIL[type][0]; $('rcDetail').placeholder = RC_DETAIL[type][1];
+  $('rcZone').value = x ? x.zone : ''; $('rcContact').value = x ? x.contact : '';
+  $('rcStatus').value = x && x.status ? x.status : '가용';
   $('rcActive').value = x ? x.active : 'Y';
+  document.querySelectorAll('.rc-patrol').forEach((el) => el.classList.toggle('hidden', type !== 'patrol'));
+  $('rcForm').scrollIntoView({ behavior: 'smooth' });
 }
 function showLink(x) {
   $('rcLinkBox').classList.remove('hidden');
-  $('rcLinkBox').innerHTML = `<b>${esc(x.name)}</b> 개인 링크 — 승인된 경로로 본인에게만 전달하세요 (링크 = 로그인 정보).
+  $('rcLinkBox').innerHTML = `<b>${esc(x.name)}</b> (${esc(cfg.types[x.type].label)} ${x.seq}번) 개인 링크 — 본인에게만 전달하세요 (링크 = 로그인 정보).
     <input type="text" readonly value="${esc(x.link)}" onclick="this.select()" style="margin-top:6px">
-    <div class="row"><button class="btn-sm btn-line" data-rcnew="${esc(x.recipientId)}">링크 재발급 (이전 링크 즉시 무효)</button></div>`;
+    <div class="row"><button class="btn-sm btn-line" data-rccopy="${esc(x.recipientId)}">복사</button>
+      <button class="btn-sm btn-line" data-rcnew="${esc(x.recipientId)}">링크 재발급 (이전 링크 즉시 무효)</button></div>`;
 }
-$('btnRcClear').onclick = () => { fillRc(null); $('rcLinkBox').classList.add('hidden'); };
+async function copyLink(x) {
+  try { await navigator.clipboard.writeText(x.link); toast(`${x.name} 링크를 복사했습니다.`); }
+  catch (e) { toast('자동 복사가 막혀 있습니다. 링크 칸을 눌러 선택한 뒤 Ctrl+C 로 복사하세요.'); }
+}
+$('btnRcClear').onclick = () => $('rcForm').classList.add('hidden');
 $('btnRcSave').onclick = async () => {
+  const b = $('btnRcSave'); b.disabled = true;
   try {
     const r = await call('saveRecipient', token, { recipientId: $('rcId').value, type: $('rcType').value, name: $('rcName').value, org: $('rcOrg').value,
       detail: $('rcDetail').value, zone: $('rcZone').value, contact: $('rcContact').value, status: $('rcStatus').value, active: $('rcActive').value });
-    toast(r.recipientId + ' 저장했습니다.');
     await loadRecipients();
     const x = recips.find((y) => y.recipientId === r.recipientId);
-    if (x) { fillRc(x); showLink(x); }
-  } catch (e) { if (!handleAuthError(e)) toast(errMsg(e)); }
+    toast(`${x ? x.name : r.recipientId} 저장했습니다.`);
+    if (x) { $('rcId').value = x.recipientId; $('rcFormTitle').textContent = `${typeName(x.type)} ${x.seq}번 수정`; showLink(x); }
+  } catch (e) { if (!handleAuthError(e)) toast(errMsg(e)); } finally { b.disabled = false; }
 };
-$('rcTable').onclick = (ev) => {
-  const e = ev.target.closest('button[data-rcedit]'), l = ev.target.closest('button[data-rclink]');
-  const id = e ? e.dataset.rcedit : l ? l.dataset.rclink : null;
-  const x = recips.find((y) => y.recipientId === id);
-  if (e && x) { fillRc(x); $('rcLinkBox').classList.add('hidden'); window.scrollTo(0, 0); }
-  if (l && x) { fillRc(x); showLink(x); window.scrollTo(0, 0); }
+$('rcGroups').onclick = async (ev) => {
+  const b = ev.target.closest('button');
+  if (!b) return;
+  const find = (id) => recips.find((y) => y.recipientId === id);
+  if (b.dataset.rcadd) {
+    b.disabled = true;
+    try { fillRc(null, b.dataset.rcadd, await call('nextRecipientSeq', token, b.dataset.rcadd)); }
+    catch (e) { if (!handleAuthError(e)) toast(errMsg(e)); } finally { b.disabled = false; }
+  } else if (b.dataset.rcedit) {
+    const x = find(b.dataset.rcedit); fillRc(x); showLink(x);
+  } else if (b.dataset.rccopy) {
+    copyLink(find(b.dataset.rccopy));
+  } else if (b.dataset.rcdel) {
+    const x = find(b.dataset.rcdel);
+    if (!armed(b, '한 번 더 누르면 삭제')) return;
+    b.disabled = true;
+    try {
+      await call('deleteRecipient', token, x.recipientId);
+      toast(`${x.name} 삭제했습니다. 링크는 더 이상 쓸 수 없습니다.`);
+      if ($('rcId').value === x.recipientId) $('rcForm').classList.add('hidden');
+      loadRecipients();
+    } catch (e) { if (!handleAuthError(e)) toast(errMsg(e)); b.disabled = false; }
+  }
 };
 $('rcLinkBox').onclick = async (ev) => {
+  const c = ev.target.closest('button[data-rccopy]');
+  if (c) return copyLink(recips.find((y) => y.recipientId === c.dataset.rccopy));
   const b = ev.target.closest('button[data-rcnew]');
   if (!b || !armed(b, '한 번 더 누르면 재발급')) return;
   const x = recips.find((y) => y.recipientId === b.dataset.rcnew);
@@ -679,7 +731,7 @@ $('rcLinkBox').onclick = async (ev) => {
 };
 
 const ACTION_LABEL = { login: '로그인', create: '요청 생성', assign: '배정', complete: '처리 완료', cancel: '취소', realert: '재알림',
-  respond: '수신자 응답', patrol_status: '순찰차 상태', user_save: '계정 저장', recipient_save: '수신자 저장' };
+  respond: '수신자 응답', patrol_status: '순찰차 상태', user_save: '계정 저장', recipient_save: '수신자 저장', recipient_delete: '수신자 삭제' };
 async function loadAudit() {
   try {
     const list = await call('listAudit', token, 200);
@@ -826,7 +878,6 @@ function getParam() {
   try {
     cfg = await call('getConfig');
     if (!cfg.ready) { $('boot').textContent = '관리자가 아직 설치(setup)를 하지 않았습니다. README 의 설치 절차를 확인하세요.'; return; }
-    fillRc(null);
     const p = await getParam();
     if (p.r) { rtoken = p.r; save('pl_rtoken', rtoken); }
     if (rtoken) return enterRecipient();
