@@ -20,7 +20,7 @@
 - 데이터: Google 스프레드시트 7시트 (`SHEETS`). 모든 칸 텍스트, 시간 `yyyy-MM-dd HH:mm:ss` KST. 읽기는 CacheService 30초 캐시, 쓰기 때 무효화, 쓰기는 `withLock_` 안에서 `rows_(name, true)`
 - 스크립트 속성: `SHEET_ID` · `WEBAPP_URL` (자동)
 - 직원: `login(아이디, PIN)` → CacheService `sess_<token>` 6시간. 역할 admin · dispatcher · officer. PIN 은 salt+SHA256. 5회 실패 10분 잠금. `changePin`(본인) · `saveUser(resetPin)`(관리자) · `resetAdminPin`(편집기)
-- 수신자: 개인 링크 `?r=<token>` (RECIPIENTS.token). 토픽 `pl-` + 20자, 수신자마다 하나. ID = 유형접두어-순번 (`PT/IN/FN/AG-001`), 순번 재사용 안 함.
+- 수신자: 개인 링크 `?r=<token>` (RECIPIENTS.token). 토픽 `pl-` + 20자, 수신자마다 하나. ID = 유형접두어-순번 (`PT/IN/FN/AG/HP-001`), 순번 재사용 안 함.
   삭제 = `active='D'` + 토큰 교체 (행 유지). `active==='Y'` 만 후보 · 로그인 가능
 - 통역 요청 대상 = `detail`(가능 언어, 쉼표 구분)에 요청 언어가 있는 통역원 (`candidates`)
 - ntfy: 서버는 메시지 내용만 만들고 **브라우저가 ntfy.sh 로 POST** (Apps Script → ntfy.sh 차단). `sequence_id` = 요청번호. **click 넣지 말 것** (계속 울리기가 안 멈춤). 긴급=우선순위 5, 보통=4
@@ -41,7 +41,7 @@
        그래도 저장 버튼이 꺼져 있으면 `editor.focus()` 후 실제 키 입력(공백) → 저장 → 공백 지우기 → 저장 (최종 내용이 커밋과 같은지 비교)
    - 파일 목록의 'Index.html 저장되지 않음' 라벨은 믿을 수 없음 (저장돼도 남음). **배포 후 /exec fetch 확인이 최종 판단**
 6. **배포**: 배포 버튼 → `find` 로 '배포 관리' 메뉴를 찾아 누름 (**좌표로 누르지 말 것** — 창 크기에 따라 '새 배포' 가 눌림. 새 배포는 주소가 바뀜) → 수정(연필) → 버전 '새 버전' → 설명 → 배포 → "버전 N" · 같은 배포 ID 확인
-7. **배포 확인**: /exec 탭에서 `fetch(location.href)` 결과에 새 코드 문자열이 있는지 확인 (웹앱 화면은 다른 출처 iframe 이라 find/read_page 로 안 보임)
+7. **배포 확인**: /exec 탭에서 `fetch(location.href)` 결과에 새 코드 문자열이 있는지 확인 (배포 직후 첫 fetch 는 이전 버전이 올 수 있음 → 몇 초 뒤 `?v=<시각>` 붙여 다시) (웹앱 화면은 다른 출처 iframe 이라 find/read_page 로 안 보임)
 8. 이 파일 '배포 기록' 과 README '개발 진행 기록' 갱신
 
 ### 브라우저 · 휴대폰 점검 요령
@@ -66,6 +66,7 @@
 | 5 | 15:08 | `4d1107c` | 알림 버튼 주소에 `?to=<수신자번호>` (Code.gs 만 반영됨 — Index.html 저장 누락) |
 | 6 | 15:10 | `4d1107c` | 같은 커밋의 Index.html 반영: `?to=` 면 수신자 화면 우선 · 등록 없으면 '개인 링크를 여세요' 안내 · 직원 로그아웃은 수신자 등록 유지 · 수신자 화면 버튼 '등록 해제' |
 | 7 | 17:42 | `f23705b` | 수신자 휴대폰 알림 최근 3건만: 새 요청 때 4번째 오래된 알림을 ntfy `GET /<topic>/<seq>/delete` 로 삭제(`ntfyDel` → `deleteNtfy`). 밀려난 요청은 재알림 · 취소 안내 안 보냄 (`isRecentFor_`). ntfy.sh 한도: IP 당 메시지 250/일 (delete 도 1건) |
+| 8 | 19:28 | `38a13a1` | 요청 유형 `hospital` (🏥 병원 응급실, `HP-`): 동시 문의 · 수용 가능/불가 + 사유(`TYPES.hospital.reasons` → RESPONSES.note, 상황판 표시) · 배정 = 이송 결정 · 환자 도착 · 인계 완료. 수신자 화면은 4초마다 다시 그리므로 사유 버튼 펼침 상태를 `reasonOpen` 에 기억. 실제 시트에 응급실 수신자 없음 (관리자 화면에서 추가) |
 
 ## 현재 데이터 · 휴대폰 상태 (2026-11-15 15시 무렵)
 
