@@ -166,4 +166,4 @@
 | `docs/설계검토.md` | 설계서 검토 · 바꾼 점 · 운영 단계 계획 |
 | `tests/test_server.js` | 모의 Apps Script 환경 서버 시험 (`node tests/test_server.js`) |
 | `CLAUDE.md` | 다음 개발 세션용 작업 안내 (배포 절차 · 점검 방법 · 주의점) |
-| `docs/sounds/` | ntfy 사이렌 소리 (emergency-ntfy 와 같음). `siren_wail_30.ogg` = 웨일 사이렌 30% 크기 ("Emergency Siren (wail) 30%", `ffmpeg -i siren_wail.ogg -af volume=0.3 -c:a libvorbis -q:a 5`) |
+| `docs/sounds/` | ntfy 사이렌 소리 (emergency-ntfy 와 같음). `siren_wail_20/30/50.ogg` = 웨일 사이렌 20 · 30 · 50% 크기 ("Emergency Siren (wail) N%", `ffmpeg -i siren_wail.ogg -af volume=0.N -c:a libvorbis -q:a 5`) |
