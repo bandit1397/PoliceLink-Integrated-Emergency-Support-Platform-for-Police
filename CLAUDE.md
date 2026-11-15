@@ -70,6 +70,7 @@
 | 8 | 19:28 | `38a13a1` | 요청 유형 `hospital` (🏥 병원 응급실, `HP-`): 동시 문의 · 수용 가능/불가 + 사유(`TYPES.hospital.reasons` → RESPONSES.note, 상황판 표시) · 배정 = 이송 결정 · 환자 도착 · 인계 완료. 수신자 화면은 4초마다 다시 그리므로 사유 버튼 펼침 상태를 `reasonOpen` 에 기억. 실제 시트에 응급실 수신자 없음 (관리자 화면에서 추가) |
 | 9 | 19:40 | `b32643a` | `CONFIG.REGIONS` 9개 (서울 4 · 경기 4 · 인천), `TYPES.*.regional` (hospital · interpreter). `candidates`: 요청 권역 있으면 `!x.zone` 또는 권역 일치만. 요청 권역은 목록 밖이면 '' (전체). 수신자 권역은 목록만 · 쉼표 여러 개 가능. 화면: 신규 요청 `nRegion` · 관리자 `rcRegion` |
 | 10 | 20:22 | `dd7572c` | 관리자 수신자 표에 ntfy 토픽 · '토픽 복사' (`data-rctopic`, `copyText`). Index.html 만 변경. 배포 후 /exec 반영까지 1분 넘게 걸림 (편집기 다시 열어 내용 확인 후 기다리니 반영) |
+| 11 | 20:32 | `da06677` | ntfy 복원 파일 버튼: `ntfyRestoreJson` · `downloadNtfyRestore` (관리자 `data-rcfile`, 수신자 `btnRestoreFile`). Apps Script iframe 은 `allow-downloads` 있음 → blob 다운로드 가능. Index.html 만 변경 |
 
 ## 현재 데이터 · 휴대폰 상태 (2026-11-15 15시 무렵)
 
@@ -90,5 +91,5 @@
 1. (사용자 응답 대기) 통역원 5 가능 언어에 몽골어 추가 여부
 2. 휴대폰에서 실제 요청 → 수락 → 배정 → 현장 도착 → 완료 전체 흐름, 화면 꺼짐 긴급 알람(계속 울리기) · 재알림 확인
 3. 수신자 화면에 'ntfy 구독 안 됨' 경고 (구독 버튼을 안 눌러 생긴 문제 재발 방지) — 웹앱에서 구독 여부를 직접 알 수는 없으므로 '구독 완료' 확인 버튼 + 시험 알림 보내기 버튼 같은 방식 검토
-4. 휴대폰 빠른 설정: emergency-ntfy `phone-setup/make-ntfy-restore.html` 방식(복원 파일, instant · insistent 포함)을 PoliceLink 토픽용으로
+4. ~~휴대폰 빠른 설정 (복원 파일)~~ → 버전 11 에서 버튼으로 됨. 남은 것: 실제 A90 에서 복원 시험 · PoliceLink 용 설정 절차 안내서(PDF)
 5. 시험 끝나면 A90 USB 디버깅 끄기 안내
