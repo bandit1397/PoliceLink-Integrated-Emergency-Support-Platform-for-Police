@@ -73,6 +73,7 @@
 | 10 | 20:22 | `dd7572c` | 관리자 수신자 표에 ntfy 토픽 · '토픽 복사' (`data-rctopic`, `copyText`). Index.html 만 변경. 배포 후 /exec 반영까지 1분 넘게 걸림 (편집기 다시 열어 내용 확인 후 기다리니 반영) |
 | 11 | 20:32 | `da06677` | ntfy 복원 파일 버튼: `ntfyRestoreJson` · `downloadNtfyRestore` (관리자 `data-rcfile`, 수신자 `btnRestoreFile`). Apps Script iframe 은 `allow-downloads` 있음 → blob 다운로드 가능. Index.html 만 변경 |
 | 12 | 21:04 | `d26046f` | **고침**: 버전 11 부터 웹앱이 '불러오는 중…' 에서 멈춤. HtmlService 가 `<script>` 안 `//` 뒤를 주석으로 지워 `'https://ntfy.sh'` → `'https:` (문법 오류). `'https:\/\/ntfy.sh'` 로 고치고 시험 추가 |
+| 13 | 21:16 | `e0d598d` | 한 휴대폰에 수신자 여러 개: localStorage `pl_rtokens` {수신자번호: {t, name, type}}. `?to=` 면 그 등록으로 열기, 2개 이상이면 `rSwitch` 전환 버튼 + 다른 등록 대기 건수(30초). 등록 해제 · 만료는 그 등록만 (`forgetRecipient`) |
 
 ## 현재 데이터 · 휴대폰 상태 (2026-11-15 15시 무렵)
 
