@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>PoliceLink 수신자 휴대폰 설정 절차</title>
+<!-- PDF 만들기: chrome --headless=new --disable-gpu --no-pdf-header-footer "--print-to-pdf=<이 폴더>\수신자휴대폰-설정-절차.pdf" "file:///<이 폴더>/pdf-source.html"
+     이 저장소는 공개 — 토픽 이름 · 개인 링크 · PIN 은 여기에 쓰지 말 것 -->
+<style>
+  @page { size: A4; margin: 16mm 15mm 16mm 15mm; }
+  body { font-family: "Malgun Gothic", "맑은 고딕", sans-serif; font-size: 10.5pt; line-height: 1.6; color: #1d2330; }
+  h1 { font-size: 20pt; margin: 0 0 4px; }
+  h2 { font-size: 14pt; margin: 22px 0 8px; padding: 6px 10px; background: #e8eef9; border-left: 5px solid #1f4e9c; break-after: avoid; }
+  h3 { font-size: 11.5pt; margin: 14px 0 6px; break-after: avoid; }
+  p { margin: 4px 0; }
+  ol, ul { margin: 4px 0 6px; padding-left: 22px; }
+  li { margin: 2px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 6px 0 10px; font-size: 9.8pt; break-inside: avoid; }
+  th, td { border: 1px solid #c9ced6; padding: 5px 7px; vertical-align: top; text-align: left; }
+  th { background: #f1f3f6; }
+  code { font-family: Consolas, monospace; font-size: 9.3pt; background: #f1f3f6; padding: 0 3px; border-radius: 3px; word-break: break-all; }
+  .sub { color: #5d6675; margin-bottom: 10px; }
+  .warn { border: 1px solid #e0a800; background: #fff8e1; padding: 8px 10px; border-radius: 6px; margin: 8px 0; break-inside: avoid; }
+  .note { border: 1px solid #c9ced6; background: #f7f8fa; padding: 8px 10px; border-radius: 6px; margin: 8px 0; break-inside: avoid; }
+  .toc { columns: 2; border: 1px solid #c9ced6; padding: 8px 10px 8px 28px; border-radius: 6px; }
+  .page-break { break-before: page; }
+  .flow { font-family: Consolas, "Malgun Gothic", monospace; font-size: 9pt; background: #f7f8fa; padding: 8px; border-radius: 6px; white-space: pre; }
+  .box { display:inline-block; width:12px; height:12px; border:1.5px solid #333; margin-right:6px; vertical-align:-1px; }
+</style>
+</head>
+<body>
+
+<h1>🚓 PoliceLink · 수신자 휴대폰 설정 절차</h1>
+<p class="sub">순찰차 · 통역원 · 금융기관 · 유관기관 · 병원 응급실 휴대폰 — ntfy 설정 파일을 이용한 빠른 설정 (휴대폰 1대당 약 5분) · 2026-11-15 작성 · 웹앱 버전 11 기준</p>
+
+<ol class="toc">
+  <li>전체 흐름 한눈에 보기</li>
+  <li>관리자: 수신자 등록 · 개인 링크 전달</li>
+  <li>(방법 B) 관리자 PC 에서 설정 파일 받기</li>
+  <li>휴대폰: 기본 설정</li>
+  <li>휴대폰: ntfy 설치 · 배터리 허용</li>
+  <li>휴대폰: 개인 링크 열기 · 설정 파일 복원</li>
+  <li>(권장) 알람음을 사이렌으로</li>
+  <li>시험 (꼭 한 번)</li>
+  <li>알람 끄는 방법</li>
+  <li>매일 점검</li>
+  <li>주의사항</li>
+  <li>링크 · 토픽이 유출됐을 때</li>
+</ol>
+
+<h2>1. 전체 흐름 한눈에 보기</h2>
+<div class="flow">[관리자 PC]   수신자 등록(＋ 추가) → 개인 링크를 그 수신자에게만 전달
+[수신자 휴대폰] ntfy 설치 → 배터리 허용 → 개인 링크 열기 → 📱 설정 파일 받기 → ntfy 에서 파일 복원
+              → (사이렌) → 시험</div>
+
+<table>
+  <tr><th style="width:36%">설정 항목</th><th>하나씩 손으로</th><th>설정 파일 사용</th></tr>
+  <tr><td>내 알림 구독 (내 토픽)</td><td>🔔 내 알림 구독 버튼 / 토픽 직접 입력</td><td>✅ 자동</td></tr>
+  <tr><td>계속 울리기 (긴급 요청, 누를 때까지)</td><td>설정 → Keep alerting</td><td>✅ 자동</td></tr>
+  <tr><td>즉시 전달 (지연 없음)</td><td>구독 설정 → 즉시 전달</td><td>✅ 자동</td></tr>
+  <tr><td>배터리 최적화 해제</td><td>설정 메뉴에서</td><td>✋ 직접 (버튼 한 번)</td></tr>
+  <tr><td>개인 링크 등록 (응답 화면)</td><td>링크 열기</td><td>✋ 직접 (같음)</td></tr>
+  <tr><td>사이렌 소리 · 저장공간 권한</td><td>직접</td><td>✋ 선택 (기본 소리면 생략 가능)</td></tr>
+</table>
+<p>안드로이드는 다른 앱이 ntfy 의 설정·권한을 대신 바꾸지 못하게 막아 두었기 때문에, ✋ 표시는 사람이 직접 눌러야 합니다.</p>
+
+<div class="warn">⚠️ <b>수신자마다 토픽이 다릅니다.</b> 설정 파일도 수신자마다 따로이며, <b>다른 사람의 파일로 복원하면 그 사람의 알림을 받게 됩니다.</b>
+  (병원 수용 요청 시스템처럼 같은 지역 파일 하나를 여러 휴대폰에 쓰는 방식이 아닙니다.)</div>
+
+<h2>2. 관리자: 수신자 등록 · 개인 링크 전달</h2>
+<ol>
+  <li>PC Chrome 에서 PoliceLink 웹앱 → <b>관리자</b> 아이디 · PIN 으로 로그인</li>
+  <li><b>⚙ 관리자 → 수신자</b> → 유형(🚓 순찰차 · 🗣️ 통역원 · 🏦 금융기관 · 🏛️ 유관기관 · 🏥 병원 응급실) 묶음에서 <b>＋ 추가</b></li>
+  <li>이름 · 소속 기관 · 상세(통역원은 <b>가능 언어</b>) 입력.
+    통역원 · 병원 응급실은 <b>담당 권역</b>(서울 4 · 경기 4 · 인천) 선택 — 비워 두면 <b>전체 구역</b> 담당 → <b>저장</b></li>
+  <li>표에 생긴 <b>개인 링크</b>의 <b>링크 복사</b> → <b>그 수신자에게만</b> 전달 (카카오톡 1:1 · 문자 · 이메일)</li>
+</ol>
+<div class="note">표의 각 줄에는 개인 링크 · <b>ntfy 토픽</b> · <b>📱 휴대폰 설정 파일</b> 버튼이 있습니다.
+  보통은 수신자가 휴대폰에서 직접 설정 파일을 받으므로(6번, 방법 A) 관리자는 <b>링크만</b> 전달하면 됩니다.</div>
+
+<h2>3. (방법 B) 관리자 PC 에서 설정 파일 받기</h2>
+<p>수신자가 휴대폰에서 파일을 받기 어려울 때만 씁니다 (관리자가 휴대폰을 직접 설정해 줄 때 등).</p>
+<ol>
+  <li>관리자 → 수신자 표에서 그 수신자 줄의 <b>📱 휴대폰 설정 파일</b> 클릭</li>
+  <li>PC <b>다운로드</b> 폴더에 <code>ntfy-PoliceLink-IN-005.json</code> 처럼 <b>수신자 번호</b>가 붙은 파일이 저장됩니다.</li>
+  <li><b>그 수신자의 휴대폰</b>으로 보내기:</li>
+</ol>
+<table>
+  <tr><th style="width:24%">방법</th><th>절차</th></tr>
+  <tr><td>카카오톡 PC</td><td>그 수신자와의 1:1 채팅(또는 관리자 본인 나와의 채팅)에 파일 끌어다 놓기 → 휴대폰에서 파일 누르기 → <b>저장</b></td></tr>
+  <tr><td>이메일</td><td>첨부해서 보내기 → 휴대폰에서 첨부파일 <b>다운로드</b></td></tr>
+  <tr><td>USB 케이블</td><td>휴대폰을 PC 에 연결 → 휴대폰 <code>Download</code> 폴더에 복사</td></tr>
+</table>
+<div class="warn">⚠️ 파일에는 <b>토픽 이름</b>이 들어 있습니다. 토픽을 아는 사람은 누구나 그 수신자의 알림을 받을 수 있으니
+  <b>단체방 · GitHub 등 공개된 곳에 올리지 말고</b>, 보낸 뒤 PC 다운로드 폴더의 파일은 지우세요.</div>
+
+<h2>4. 휴대폰: 기본 설정</h2>
+<p>안드로이드 휴대폰 기준 (갤럭시 A90 · 안드로이드 12 에서 확인). 메뉴 이름은 기종마다 조금 다를 수 있습니다.
+  아이폰은 "계속 울리기"가 안 되므로 쓰지 않습니다.</p>
+<table>
+  <tr><th style="width:18%">항목</th><th style="width:30%">위치</th><th style="width:22%">설정</th><th>이유</th></tr>
+  <tr><td>인터넷</td><td>화면 위를 내려서 빠른 설정</td><td><b>Wi-Fi 또는 데이터 항상 켜기</b></td><td>꺼져 있으면 알림이 아예 안 옴</td></tr>
+  <tr><td>알람 음량</td><td>설정 → 소리 및 진동 → 음량 → <b>알람</b></td><td><b>중간 이상</b> (0 안 됨)</td><td>ntfy 는 알람 음량으로 울림</td></tr>
+  <tr><td>무음 · 진동</td><td>—</td><td>상관없음</td><td>알람 음량으로 울리므로 소리 남</td></tr>
+  <tr><td>방해 금지</td><td>설정 → 알림 → 방해 금지</td><td>안 쓰거나 <b>알람 허용</b></td><td>알람까지 막으면 안 울림</td></tr>
+  <tr><td>충전</td><td>—</td><td>가능하면 <b>충전기에 꽂아 두기</b></td><td>즉시 전달은 배터리를 조금 더 씀</td></tr>
+</table>
+
+<h2>5. 휴대폰: ntfy 설치 · 배터리 허용</h2>
+<ol>
+  <li>Play 스토어에서 <b>ntfy</b> 설치 (무료, 회원가입 없음) → 한 번 열기 → <b>알림 허용</b>을 물으면 <b>허용</b></li>
+  <li>ntfy 위쪽 <b>배터리 최적화</b> 안내 → <b>지금 수정하기 → 허용</b><br>
+    안내가 없으면: 설정 → 애플리케이션 → ntfy → 배터리 → <b>제한 없음</b>(또는 최적화하지 않음)<br>
+    삼성 일부 기종: 설정 → 배터리 → 백그라운드 사용 제한 → <b>절전 예외 앱</b>에 ntfy 추가</li>
+</ol>
+
+<h2>6. 휴대폰: 개인 링크 열기 · 설정 파일 복원</h2>
+<h3>6-1. 개인 링크 열기 (응답 화면 등록)</h3>
+<ol>
+  <li>관리자에게 받은 <b>개인 링크</b>를 <b>휴대폰의 기본 브라우저</b>(삼성 인터넷 또는 Chrome)로 엽니다.<br>
+    알림의 <b>PoliceLink 열기</b> 버튼은 기본 브라우저로 열립니다. 등록은 브라우저마다 따로 저장되므로 <b>같은 브라우저</b>여야 합니다.</li>
+  <li>위쪽에 내 이름 · 소속이 보이면 등록 완료. 첫 화면을 한 번 <b>터치</b> (그래야 웹앱 소리가 납니다)</li>
+  <li>브라우저 메뉴 → <b>홈 화면에 추가</b></li>
+</ol>
+
+<h3>6-2. 설정 파일 받기 · 복원 (방법 A — 휴대폰에서 바로)</h3>
+<ol>
+  <li>응답 화면의 <b>📱 화면이 꺼져도 알림 받기</b> 상자 → <b>📱 설정 파일 받기</b><br>
+    (상자가 없으면 화면 아래 <b>📱 화면 꺼짐 알림 설정 보기</b>를 누름)</li>
+  <li><code>ntfy-PoliceLink-(내 번호).json</code> 이 휴대폰 <b>다운로드</b> 폴더에 저장됩니다.
+    (방법 B: 관리자에게 받은 파일을 다운로드 폴더에 저장)</li>
+  <li>ntfy 오른쪽 위 <b>⋮ → 설정</b> → 맨 아래 <b>백업 및 복원</b> → <b>파일에서 복원</b></li>
+  <li>파일 선택 화면에서 <b>다운로드</b> → 받은 파일 선택 (안 보이면 왼쪽 메뉴 ☰ → 다운로드 / 내 파일)</li>
+  <li>"복원 성공" 안내 후 ntfy 첫 화면에 <b>🗣️ PoliceLink 통역원 5</b> 처럼 <b>내 이름</b>의 구독이 보이면 완료</li>
+  <li>알림창을 내려 ntfy <b>"알림 수신중 · 즉시 전달 주제 n개 구독중"</b> 알림 확인 (없으면 ntfy 를 닫았다 다시 열기)</li>
+  <li>웹앱으로 돌아와 <b>확인 — 이 안내 숨기기</b> (<b>🔔 내 알림 구독</b> 버튼은 누르지 않아도 됩니다 — 이미 구독됨)</li>
+</ol>
+<div class="note">이미 같은 토픽을 구독한 휴대폰에서는 그 토픽이 복원되지 않고 건너뜁니다.
+  설정 파일대로(즉시 전달 · 계속 울리기) 맞추려면 ntfy 에서 그 구독을 <b>길게 눌러 삭제</b>한 뒤 다시 복원하세요.
+  ntfy 의 다른 구독(다른 업무 알림 등)과 앱 전체 설정은 건드리지 않습니다.</div>
+
+<h2>7. (권장) 알람음을 사이렌으로</h2>
+<p>설정 파일은 알림 소리를 바꾸지 못하므로, 새로 설치한 휴대폰은 <b>기본 소리</b>로 울립니다.
+  ntfy 의 계속 울리는 소리는 ntfy 알림 종류 중 <b>"우선순위 최상"</b>의 소리를 씁니다. 이것만 바꾸면 되고 다른 앱 소리는 그대로입니다.</p>
+
+<h3>7-1. 사이렌 파일 받기</h3>
+<p>휴대폰 브라우저에서 아래 주소 중 하나를 엽니다 → <b>다운로드</b> 폴더에 저장됩니다.
+  주소 앞부분: <code>https://github.com/bandit1397/PoliceLink-Integrated-Emergency-Support-Platform-for-Police/raw/main/docs/sounds/</code></p>
+<table>
+  <tr><th style="width:34%">소리</th><th>파일 이름 (주소 앞부분 뒤에 붙임)</th></tr>
+  <tr><td>천천히 오르내림 (기본 크기)</td><td><code>siren_wail.ogg</code></td></tr>
+  <tr><td>천천히 오르내림 · 작게 (50 · 30 · 20%)</td><td><code>siren_wail_50.ogg</code> · <code>siren_wail_30.ogg</code> · <code>siren_wail_20.ogg</code></td></tr>
+  <tr><td>빠른 삐용삐용</td><td><code>siren_yelp.ogg</code></td></tr>
+</table>
+<p>사무실 · 야간 근무처럼 너무 크면 <b>작은 크기</b> 파일을 고르세요 (알람 음량을 줄이는 것보다 안전 — 음량은 다른 알람과 같이 줄어듦).</p>
+
+<h3>7-2. 알림 소리 폴더로 옮기기 (소리 목록에 바로 나오게)</h3>
+<ol>
+  <li><b>내 파일</b> 앱 → <b>다운로드</b></li>
+  <li>받은 <code>siren_wail….ogg</code> 를 길게 누르기 → <b>이동</b></li>
+  <li><b>내장 메모리</b> → <b>Notifications</b> 폴더 → <b>여기로 이동</b></li>
+</ol>
+
+<h3>7-3. ntfy "우선순위 최상" 소리 바꾸기</h3>
+<ol>
+  <li>설정 → 애플리케이션 → ntfy → <b>알림</b></li>
+  <li><b>우선순위 최상</b>(Max priority) → <b>소리</b></li>
+  <li>목록에서 사이렌 선택 → <b>뒤로 가기</b> (저장됨). 목록에 없으면 <b>＋ / 직접 설정</b>에서 파일을 직접 선택</li>
+</ol>
+<div class="note"><b>우선순위 최상</b> 항목이 없으면 아직 <b>긴급</b> 요청 알림을 한 번도 받지 않은 것입니다 → 8번 시험(긴급)을 한 번 한 뒤 다시 보세요.</div>
+
+<h3>7-4. 저장공간 권한 허용 (꼭)</h3>
+<ol>
+  <li>설정 → 애플리케이션 → ntfy → <b>권한</b></li>
+  <li><b>저장공간</b> → <b>허용</b> (안드로이드 13 이상은 <b>음악 및 오디오</b> → 허용)</li>
+</ol>
+<div class="warn">⚠️ 이 권한이 없으면 사이렌이 <b>한 번만</b> 울리고 계속 울리지 않습니다.
+  그럴 땐 권한을 허용하거나 소리를 기본 알림 소리로 되돌리세요.</div>
+
+<h2>8. 시험 (설정 후 꼭 한 번)</h2>
+<ol>
+  <li>수신자 휴대폰 <b>화면을 끕니다</b> (무음 모드여도 됨)</li>
+  <li>관리자 · 상황관리자 · 현장 경찰관 화면(PC 등)에서 <b>➕ 신규 요청</b> → 그 수신자 유형 선택 → 긴급도 <b>긴급</b>
+    → 요청 내용에 "시험" → 알림 대상에서 <b>그 수신자만</b> 체크 → 보내기</li>
+  <li><b>몇 초 안에</b> 알람이 울리고 <b>누를 때까지 계속</b> 울리면 성공 (사이렌을 설정했다면 사이렌)</li>
+  <li>잠금을 풀고 <b>알림 본문</b>을 누름 → 알람이 <b>멈추고</b> ntfy 화면이 열리는지</li>
+  <li>ntfy 화면의 <b>PoliceLink 열기</b> → 관리자 화면이 아니라 <b>내 응답 화면</b>이 열리는지</li>
+  <li>응답 버튼(예: <b>통역 가능 / 수용 불가 → 사유</b>)을 누름 → 보낸 쪽 상황판에 응답이 보이는지 → 상황판에서 <b>요청 취소</b></li>
+</ol>
+<table>
+  <tr><th style="width:36%">시험 결과</th><th>원인 · 조치</th></tr>
+  <tr><td>알림이 아예 안 옴</td><td>ntfy 에 <b>내 이름</b> 구독이 있는지 (6-2) · 인터넷 (4) · "알림 수신중" 알림 · 보낼 때 이 수신자를 대상으로 골랐는지 (통역원은 <b>언어 · 권역</b>, 응급실은 <b>권역</b>이 맞아야 목록에 나옴)</td></tr>
+  <tr><td>1~수 분 늦게 옴</td><td>구독 → ⋮ → 구독 설정 → <b>즉시 전달</b> 켜져 있는지</td></tr>
+  <tr><td>소리 없음 · 한 번만 울림</td><td><b>알람 음량</b> (4) · 구독 설정의 계속 울리기 · 사이렌이면 <b>저장공간 권한</b> (7-4) · <b>보통</b> 요청은 원래 한 번만 울림 (11번)</td></tr>
+  <tr><td>PoliceLink 열기 → 관리자 화면 · '개인 링크를 여세요'</td><td>다른 브라우저로 열림 → 그 브라우저에서 개인 링크를 한 번 다시 열기 (6-1)</td></tr>
+  <tr><td>복원했는데 구독이 안 생김</td><td>같은 토픽이 이미 있음 → 구독 삭제 후 다시 복원 (6-2)</td></tr>
+  <tr><td>"복원 실패"</td><td>내 번호의 .json 파일이 맞는지, 전송 중 이름 · 내용이 바뀌지 않았는지</td></tr>
+</table>
+
+<h2>9. 🔕 알람 끄는 방법</h2>
+<table>
+  <tr><th style="width:52%">방법</th><th>소리</th></tr>
+  <tr><td><b>알림 본문 누르기</b></td><td>✅ 멈춤 (ntfy 화면이 열림)</td></tr>
+  <tr><td>ntfy 앱 → 내 구독 누르기</td><td>✅ 멈춤</td></tr>
+  <tr><td>웹앱 응답 화면의 빨간 <b>응답 대기</b> 배너</td><td>✅ 멈춤 (ntfy 화면 잠깐 열림 → 뒤로 가기)</td></tr>
+  <tr><td>웹앱의 <b>응답 버튼</b> (가능 / 불가)</td><td>✅ 응답 후 멈춤 (ntfy 화면 잠깐 열림 → 뒤로 가기)</td></tr>
+  <tr><td>알림을 옆으로 밀어 지우기</td><td>❌ 안 멈출 수 있음</td></tr>
+  <tr><td>알림의 <b>PoliceLink 열기</b> 버튼</td><td>❌ 웹앱만 열림 → 웹앱 빨간 배너로 끄기</td></tr>
+  <tr><td>그래도 안 멈출 때</td><td>설정 → 애플리케이션 → ntfy → <b>강제 중지</b> → <b>ntfy 다시 열기</b> (안 열면 다음 알림을 못 받음)</td></tr>
+</table>
+<div class="warn"><b>ntfy 화면을 열어 둔 채로 휴대폰을 잠그지 마세요.</b> 그 화면이 열려 있는 동안 그 토픽 알림은 알림창에 뜨지 않고,
+  다음 알람이 오면 잠금을 풀 때 알림만 지워지고 알람은 계속 울립니다. 확인 후에는 <b>홈 버튼</b>으로 나오세요.</div>
+
+<h2>10. ✅ 매일 점검 (근무 시작 때 10초)</h2>
+<p><span class="box"></span>휴대폰 <b>충전 중</b> · <b>Wi-Fi(또는 데이터) 켜짐</b></p>
+<p><span class="box"></span>알림창에 ntfy <b>"알림 수신중"</b> 알림이 있음 (<b>"Waiting for network"</b> 이면 인터넷 끊김)</p>
+<p><span class="box"></span><b>알람 음량</b>이 0 이 아님</p>
+<p><span class="box"></span>ntfy 화면이 맨 앞에 열려 있지 않음 (홈 화면이나 PoliceLink 응답 화면으로 두기)</p>
+
+<h2>11. 주의사항 · 알아 둘 동작</h2>
+<ul>
+  <li><b>긴급</b> 요청은 누를 때까지 계속 울리고, <b>보통</b> 요청은 한 번 울립니다.</li>
+  <li>응답하지 않으면 <b>3분마다 최대 3번</b> 다시 알립니다 (상황판을 켜 둔 관제 PC 가 있을 때).</li>
+  <li>휴대폰 알림창에는 <b>최근 요청 3건</b>의 알림만 남고, 오래된 것은 자동으로 지워집니다. 지워진 요청도 PoliceLink 응답 화면에는 그대로 있습니다.</li>
+  <li>알림에는 <b>요청번호 · 유형 · 긴급도</b>만 담깁니다. 내용은 PoliceLink 화면에서 봅니다.</li>
+  <li><b>개인 링크 · 토픽 · 설정 파일</b>은 그 수신자 본인만 갖습니다. 공개된 곳에 올리지 않습니다.</li>
+  <li>ntfy.sh 공용 무료 서버에 의존합니다. 서버 장애 시 화면 꺼짐 알림이 멈출 수 있는 <b>시험 운영</b>용입니다.</li>
+  <li><b>실제 사건 정보 · 개인정보(이름, 주민등록번호 등)는 입력하지 마세요.</b> 실제 업무 적용 전 소속 기관의 승인과 개인정보 보호 검토가 필요합니다.</li>
+  <li>설정 파일 방식은 ntfy 1.25.2 형식으로 만들었지만 <b>PoliceLink 수신자 휴대폰에서는 아직 시험 전</b>입니다. 첫 휴대폰에서 8번 시험을 꼭 해 주세요.</li>
+</ul>
+
+<h2>12. 링크 · 토픽이 유출됐을 때</h2>
+<table>
+  <tr><th style="width:30%">유출된 것</th><th>조치 (관리자 → 수신자)</th><th style="width:28%">휴대폰에서 할 일</th></tr>
+  <tr><td><b>개인 링크</b>만</td><td>그 수신자 <b>수정 → 링크 재발급</b> (이전 링크 즉시 무효). 토픽은 그대로</td><td>새 링크를 같은 브라우저로 한 번 열기 (ntfy 는 그대로)</td></tr>
+  <tr><td><b>토픽 · 설정 파일</b></td><td>그 수신자 <b>삭제</b> → <b>＋ 추가</b>로 다시 등록 (새 번호 · 새 링크 · 새 토픽). 지난 기록은 옛 번호로 남음</td><td>ntfy 에서 옛 구독 <b>길게 눌러 삭제</b> → 새 링크 열기 → 새 설정 파일 복원 (6) → 시험 (8)</td></tr>
+</table>
+<p><span class="box"></span>옛 설정 파일(.json)을 PC · 휴대폰 · 채팅방에서 모두 지웠다
+  &nbsp; <span class="box"></span>새 링크 · 토픽을 공개된 곳에 적지 않았다</p>
+
+</body>
+</html>
