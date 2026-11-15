@@ -5,7 +5,9 @@
 | GitHub (공개) | https://github.com/bandit1397/PoliceLink-Integrated-Emergency-Support-Platform-for-Police |
 | 기반 프로젝트 | `Desktop/emergency-ntfy` (환자 수용 요청). **그 폴더는 수정하지 말 것** — 참고 · 복사만 |
 | 파일 | `Code.gs`(서버) · `Index.html`(화면) · `appsscript.json` · `README.md`(사용자 안내) · `docs/설계검토.md` |
-| Apps Script 프로젝트 · 웹앱 URL | 아직 없음 (사용자가 만들면 여기에 적기) |
+| Apps Script 프로젝트 "PoliceLink" | https://script.google.com/home/projects/1OhwTR9Aja90AILQ3bISaVO-mgcL43OoWEa50YnFzCeA8fsjsLi-_5rg9/edit |
+| 웹앱 (/exec, 버전 1 "1차 시험판") | https://script.google.com/macros/s/AKfycbx7UhxhjwnyxErO3oBARbPh4dgB-CpDJA8Hz4k2uaULFHXmWIHvQ-GNZA8O6kiwEwUcIg/exec |
+| 시험 계정 PIN · 시트 주소 | `accounts.local.txt` (git 제외, 저장소에 쓰지 말 것) |
 
 ## 핵심 구조
 
@@ -26,4 +28,7 @@
 
 ## 상태 (2026-11-15)
 
-- 1차 시험판 작성, 서버 로직은 모의 환경 시험 통과. **실제 Apps Script · 휴대폰 시험은 아직 안 함**
+- 1차 시험판 작성, 서버 로직은 모의 환경 시험 통과
+- Apps Script 배포 완료: 편집기에 GitHub `main` 의 Code.gs · Index.html 붙여넣기 → `setupDemo` 실행(권한 승인, 시트 · 계정 3개 · 가상 수신자 12곳) → 웹앱 버전 1 (실행: 나, 액세스: 모든 사용자) → /exec 열어 로그인 화면 확인 (WEBAPP_URL 저장됨)
+- 편집기 반영 방법: 편집기 페이지에서 `monaco.editor.getModels()` 에 raw.githubusercontent.com 내용을 넣고 Ctrl+S (clasp 없음)
+- **아직 안 함**: 로그인 후 화면 흐름 · 휴대폰 ntfy 시험
