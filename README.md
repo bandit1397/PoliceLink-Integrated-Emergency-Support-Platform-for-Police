@@ -4,6 +4,14 @@
 수신자의 **수락/거절 → 상황관리자 배정 → 처리 완료**까지 실시간 상황판과 Google 스프레드시트에 기록합니다.
 수신자 휴대폰은 화면이 꺼져 있어도 무료 앱 **ntfy** 로 **무음 모드에서도 알람처럼** 울립니다.
 
+## 🔗 웹앱 주소 (관리자 · 상황관리자 · 현장 경찰관 로그인)
+
+**https://script.google.com/macros/s/AKfycbx7UhxhjwnyxErO3oBARbPh4dgB-CpDJA8Hz4k2uaULFHXmWIHvQ-GNZA8O6kiwEwUcIg/exec**
+
+- PC Chrome 에서 열고 **아이디 + PIN** 으로 로그인합니다. 관리자는 `admin`. PIN 은 여기 적지 않습니다 (공개 저장소).
+- 같은 주소가 역할(관리자 · 상황관리자 · 현장 경찰관)에 따라 다른 메뉴를 보여 줍니다. 코드를 고쳐 다시 배포해도 주소는 그대로입니다.
+- 수신자(순찰차 · 통역원 · 기관 · 응급실)는 이 주소가 아니라 관리자가 준 **개인 링크**로 엽니다.
+
 > 기반: [emergency-ntfy](https://github.com/bandit1397/emergency-ntfy) (환자 수용 요청) 의 ntfy 알림 · 알람 끄기 · 자동 갱신 구조.
 > 설계서 검토 결과와 바꾼 점: **[docs/설계검토.md](docs/설계검토.md)**
 
