@@ -226,6 +226,35 @@ assert(!JSON.stringify(G.listUsers(admin)).includes('pinHash'));
 assert(/^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d$/.test(sheets.REQUESTS.data[1][1]), 'time format ' + sheets.REQUESTS.data[1][1]);
 assert.strictEqual(G.find_('REQUESTS', 'requestId', id).createdAt, Date.parse('2026-11-15T10:00:00+09:00'));
 
+// 기관별 분리: 유형마다 요청 1건씩 → 각 수신자는 자기에게 온 것만, 다른 수신자 이름 · 내부 메모 없음
+G.clearRequests();
+const all = G.listRecipients(admin);
+const byName = (n) => all.find((x) => x.name === n);
+const sent = {
+  interpreter: G.createRequest(disp, { type: 'interpreter', urgency: '긴급', language: '영어', summary: '가상 통역 요청', detail: 'SECRET-I', targets: [byName('통역원 A (가상)').recipientId] }).requestId,
+  finance: G.createRequest(disp, { type: 'finance', urgency: '긴급', summary: '가상 금융 협조', detail: 'SECRET-F', targets: [byName('가상은행 협조창구').recipientId] }).requestId,
+  agency: G.createRequest(disp, { type: 'agency', urgency: '보통', summary: '가상 기관 지원', detail: 'SECRET-A', targets: [byName('소방 상황실 (가상)').recipientId, byName('구청 당직실 (가상)').recipientId] }).requestId,
+};
+const view = (n) => G.recipientView(byName(n).token);
+const ids = (v) => [...v.items.map((r) => r.requestId)];
+assert.deepStrictEqual(ids(view('통역원 A (가상)')), [sent.interpreter]);
+assert.deepStrictEqual(ids(view('통역원 B (가상)')), [], 'other interpreter not targeted');
+assert.deepStrictEqual(ids(view('가상은행 협조창구')), [sent.finance]);
+assert.deepStrictEqual(ids(view('샘플저축은행 협조창구')), [], 'other bank sees nothing');
+assert.deepStrictEqual(ids(view('소방 상황실 (가상)')), [sent.agency]);
+assert.deepStrictEqual(ids(view('정신건강복지센터 (가상)')), [], 'untargeted agency');
+['통역원 A (가상)', '가상은행 협조창구', '소방 상황실 (가상)'].forEach((n) => {
+  const j = JSON.stringify(view(n));
+  assert(!/SECRET-/.test(j), 'no internal memo for ' + n);
+  all.filter((x) => x.name !== n).forEach((o) => assert(!j.includes(o.name) && !j.includes(o.token), n + ' leaks ' + o.name));
+});
+// 다른 기관의 요청에 응답 시도 → 거부
+throws(() => G.recipientRespond(byName('가상은행 협조창구').token, sent.interpreter, 'accept'), /찾을 수 없/);
+throws(() => G.recipientRespond(byName('구청 당직실 (가상)').token, sent.finance, 'accept'), /찾을 수 없/);
+// 수신자 토큰으로 직원 기능 불가
+throws(() => G.dashboard(byName('통역원 A (가상)').token), /SESSION_EXPIRED/);
+console.log('ISOLATION OK');
+
 G.clearRequests();
 assert.strictEqual(G.rows_('REQUESTS', true).length, 0);
 assert.strictEqual(G.rows_('USERS', true).length, 4);
