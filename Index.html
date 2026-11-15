@@ -719,13 +719,16 @@ function renderRcTable() {
     return `<div class="card scroll">
       <div class="req-head"><h2 style="margin:0">${typeName(k)} <span class="muted">${list.length}곳</span></h2>
         <button class="btn-sm b-green" data-rcadd="${k}">＋ 추가</button></div>
-      <table><tr><th>순번</th><th>이름 · 상세</th><th>개인 링크</th><th></th></tr>
+      <table><tr><th>순번</th><th>이름 · 상세</th><th>개인 링크 · ntfy 토픽</th><th></th></tr>
       ${list.map((x) => `<tr${x.active === 'Y' ? '' : ' style="opacity:.55"'}>
         <td><b>${x.seq}</b><br><span class="muted">${esc(x.recipientId)}</span></td>
         <td><b>${esc(x.name)}</b>${x.active === 'Y' ? '' : ' <span class="tag">일시 중지</span>'}<br>
           <span class="muted">${esc(x.org)}${x.detail ? ' · ' + esc(x.detail) : ''}${x.zone ? ' · ' + esc(x.zone) : isRegional(x.type) ? ' · 전체 구역' : ''}${x.status ? ' · ' + esc(x.status) : ''}</span></td>
         <td style="min-width:200px"><input type="text" readonly value="${esc(x.link)}" onclick="this.select()" style="font-size:12px;padding:6px">
-          <button class="btn-sm btn-line" data-rccopy="${esc(x.recipientId)}" style="margin-top:4px">복사</button></td>
+          <button class="btn-sm btn-line" data-rccopy="${esc(x.recipientId)}" style="margin-top:4px">링크 복사</button>
+          <div class="muted" style="margin-top:8px;font-size:12px">ntfy 토픽 (휴대폰 ntfy 앱 ＋ 에 입력)</div>
+          <input type="text" readonly value="${esc(x.topic || '')}" onclick="this.select()" style="font-size:12px;padding:6px">
+          <button class="btn-sm btn-line" data-rctopic="${esc(x.recipientId)}" style="margin-top:4px">토픽 복사</button></td>
         <td style="white-space:nowrap"><button class="btn-sm btn-line" data-rcedit="${esc(x.recipientId)}">수정</button>
           <button class="btn-sm b-red" data-rcdel="${esc(x.recipientId)}">삭제</button></td></tr>`).join('')
         || '<tr><td colspan="4" class="muted">등록된 대상이 없습니다. ＋ 추가를 누르세요.</td></tr>'}
@@ -756,8 +759,13 @@ function showLink(x) {
   $('rcLinkBox').classList.remove('hidden');
   $('rcLinkBox').innerHTML = `<b>${esc(x.name)}</b> (${esc(cfg.types[x.type].label)} ${x.seq}번) 개인 링크 — 본인에게만 전달하세요 (링크 = 로그인 정보).
     <input type="text" readonly value="${esc(x.link)}" onclick="this.select()" style="margin-top:6px">
-    <div class="row"><button class="btn-sm btn-line" data-rccopy="${esc(x.recipientId)}">복사</button>
+    <div class="muted" style="margin-top:8px">ntfy 토픽: <b>${esc(x.topic || '')}</b> — 링크와 마찬가지로 본인에게만 (토픽을 알면 알림을 받아 볼 수 있음)</div>
+    <div class="row"><button class="btn-sm btn-line" data-rccopy="${esc(x.recipientId)}">링크 복사</button>
       <button class="btn-sm btn-line" data-rcnew="${esc(x.recipientId)}">링크 재발급 (이전 링크 즉시 무효)</button></div>`;
+}
+async function copyText(text, what) {
+  try { await navigator.clipboard.writeText(text); toast(`${what}을 복사했습니다.`); }
+  catch (e) { toast('자동 복사가 막혀 있습니다. 칸을 눌러 선택한 뒤 Ctrl+C 로 복사하세요.'); }
 }
 async function copyLink(x) {
   try { await navigator.clipboard.writeText(x.link); toast(`${x.name} 링크를 복사했습니다.`); }
@@ -787,6 +795,8 @@ $('rcGroups').onclick = async (ev) => {
     const x = find(b.dataset.rcedit); fillRc(x); showLink(x);
   } else if (b.dataset.rccopy) {
     copyLink(find(b.dataset.rccopy));
+  } else if (b.dataset.rctopic) {
+    copyText(find(b.dataset.rctopic).topic, find(b.dataset.rctopic).name + ' 토픽');
   } else if (b.dataset.rcdel) {
     const x = find(b.dataset.rcdel);
     if (!armed(b, '한 번 더 누르면 삭제')) return;

@@ -104,7 +104,7 @@ throws(() => G.dashboard('bogus'), /SESSION_EXPIRED/);
 // 수신자 목록: 관리자만 토큰/링크
 const rAdmin = G.listRecipients(admin);
 const rOff = G.listRecipients(off);
-assert(rAdmin[0].token && rAdmin[0].link.includes('?r='), 'admin sees link');
+assert(rAdmin[0].token && rAdmin[0].link.includes('?r=') && /^pl-/.test(rAdmin[0].topic), 'admin sees link + topic');
 assert(!rOff[0].token && !rOff[0].topic, 'officer no token');
 const tok = (name) => rAdmin.find((x) => x.name === name).token;
 
