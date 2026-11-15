@@ -324,6 +324,35 @@ const cp = G.createRequest(off, { type: 'patrol', urgency: '보통', summary: '�
 assert.strictEqual(view('42호').items.find((r) => r.requestId === cp.requestId).requesterName, '순경 이OO');
 console.log('ISOLATION OK');
 
+// 밀어내기: 수신자 휴대폰에는 최근 3건 알림만 (4번째부터 오래된 것 삭제 · 재알림 · 취소 안내 안 보냄)
+{
+  const r42 = byName('42호');
+  const before = G.requestIdsFor_(G.rows_('REQUESTS', true), r42.recipientId);
+  const ids = [];
+  let last;
+  for (let i = 0; i < 5; i++) {
+    last = G.createRequest(disp, { type: 'patrol', urgency: '보통', summary: '가상 밀어내기 ' + i, targets: [r42.recipientId] });
+    ids.push(last.requestId);
+  }
+  const all = before.concat(ids);
+  assert.strictEqual(last.ntfy.length, 1);
+  assert.strictEqual(last.ntfyDel.length, 1, 'one push-out delete');
+  assert.strictEqual(last.ntfyDel[0].del.sequence_id, all[all.length - 4], '4th newest deleted');
+  assert.strictEqual(last.ntfyDel[0].del.topic, r42.topic);
+  assert(!('body' in last.ntfyDel[0]), 'delete is not a publish');
+  // 3건 이하면 삭제 없음
+  const solo = G.createRequest(disp, { type: 'interpreter', urgency: '보통', language: '영어', summary: '가상', targets: [byName('통역원 D (가상)').recipientId] });
+  const dCount = G.requestIdsFor_(G.rows_('REQUESTS', true), byName('통역원 D (가상)').recipientId).length;
+  assert.strictEqual(solo.ntfyDel.length, dCount > 3 ? 1 : 0);
+  // 재알림: 밀려난 요청(ids[0], ids[1])은 안 울리고 최근 3건만
+  clock += 3 * 60000;
+  const ra2 = G.pendingRealerts(disp).filter((m) => m.body.topic === r42.topic).map((m) => m.body.sequence_id);
+  assert.strictEqual(ra2.sort().join(), ids.slice(-3).sort().join(), 'realert only newest 3');
+  // 취소: 밀려난 요청은 안내 안 보냄(알림을 되살리지 않음), 최근 요청은 보냄
+  assert.strictEqual(G.closeRequest(disp, ids[0], 'cancelled').ntfy.length, 0);
+  assert.strictEqual(G.closeRequest(disp, ids[4], 'cancelled').ntfy.length, 1);
+}
+
 G.clearRequests();
 assert.strictEqual(G.rows_('REQUESTS', true).length, 0);
 assert.strictEqual(G.rows_('USERS', true).length, 4);

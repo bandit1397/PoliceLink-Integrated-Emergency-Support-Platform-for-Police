@@ -28,6 +28,7 @@ const CONFIG = {
   ROLES: { admin: '관리자', dispatcher: '상황관리자', officer: '현장 경찰관' },
   REALERT_MIN: 3,       // 응답이 없으면 3분마다
   REALERT_MAX: 3,       // 최대 3번 다시 알림
+  NTFY_KEEP: 3,         // 수신자 휴대폰에 남기는 요청 알림 수. 새 요청이 오면 오래된 것부터 ntfy 에서 삭제 (밀어내기)
   SESSION_SEC: 21600,   // 직원 로그인 유지 6시간 (CacheService 최대)
   LIST_HOURS: 24,       // 상황판에 보이는 종료 요청: 최근 24시간
   LOGIN_MAX_FAIL: 5,    // PIN 5번 틀리면
@@ -262,9 +263,12 @@ function createRequest(token, data) {
   };
   withLock_(() => append_('REQUESTS', req));
   audit_(sess, 'create', req.requestId, 'ok', CONFIG.TYPES[type].label + ' · ' + req.urgency + ' · 대상 ' + targets.length);
+  const all = rows_('REQUESTS');
   return {
     requestId: req.requestId,
     ntfy: targets.map((id) => ntfyAlarm_(req, recips[id], '')).filter(Boolean),
+    // 새 알림을 보낸 뒤 브라우저가 보냄: 수신자마다 최근 NTFY_KEEP 건보다 오래된 알림 1건 삭제
+    ntfyDel: targets.map((id) => ntfyPrune_(all, recips[id])).filter(Boolean),
   };
 }
 
@@ -293,7 +297,8 @@ function assign(token, requestId, recipientId) {
   audit_(sess, 'assign', requestId, 'ok', recipientId);
   const recips = indexBy_(rows_('RECIPIENTS'), 'recipientId');
   const msgs = [ntfyInfo_(out.req, recips[recipientId], '배정 확정 — 앱에서 확인하세요.', 4)];
-  if (out.prev) msgs.push(ntfyInfo_(out.req, recips[out.prev], '다른 대상으로 재배정되었습니다.', 3));
+  // 이전 대상의 알림이 이미 밀려나 지워졌으면 다시 띄우지 않는다
+  if (out.prev && isRecentFor_(rows_('REQUESTS'), out.prev, requestId)) msgs.push(ntfyInfo_(out.req, recips[out.prev], '다른 대상으로 재배정되었습니다.', 3));
   return { ntfy: msgs.filter(Boolean) };
 }
 
@@ -316,7 +321,9 @@ function closeRequest(token, requestId, outcome) {
   // 취소 시: 아직 울리고 있을 수 있는 알림을 같은 sequence_id 의 조용한 알림으로 바꿔 준다.
   if (outcome !== 'cancelled') return { ntfy: [] };
   const recips = indexBy_(rows_('RECIPIENTS'), 'recipientId');
-  return { ntfy: splitIds_(req.targets).map((id) => ntfyInfo_(req, recips[id], '요청이 취소되었습니다.', 2)).filter(Boolean) };
+  const all = rows_('REQUESTS');
+  return { ntfy: splitIds_(req.targets).filter((id) => isRecentFor_(all, id, requestId))
+    .map((id) => ntfyInfo_(req, recips[id], '요청이 취소되었습니다.', 2)).filter(Boolean) };
 }
 
 /**
@@ -334,11 +341,13 @@ function pendingRealerts(token) {
   withLock_(() => {
     const latest = latestResponses_(true);
     const recips = indexBy_(rows_('RECIPIENTS', true), 'recipientId');
+    const all = rows_('REQUESTS', true);
     due.forEach((d) => {
       const r = find_('REQUESTS', 'requestId', d.requestId);
       if (!r || r.status !== 'open' || now - r.lastAlertAt < CONFIG.REALERT_MIN * 60000) return;
       const n = Number(r.realertCount) + 1;
-      const silent = splitIds_(r.targets).filter((id) => !latest[r.requestId + '|' + id]);
+      // 휴대폰에서 밀려나 지워진(최근 NTFY_KEEP 건 밖) 요청은 다시 울리지 않는다
+      const silent = splitIds_(r.targets).filter((id) => !latest[r.requestId + '|' + id] && isRecentFor_(all, id, r.requestId));
       update_('REQUESTS', r, { realertCount: n, lastAlertAt: now });
       silent.forEach((id) => {
         const m = ntfyAlarm_(r, recips[id], '[재알림 ' + n + '/' + CONFIG.REALERT_MAX + '] ');
@@ -583,6 +592,28 @@ function ntfyInfo_(req, rc, text, priority) {
     priority: priority,
     tags: [t.tag],
   });
+}
+
+/** 이 수신자가 대상인 요청번호, 오래된 것부터 (시트 행 순서 = 만든 순서) */
+function requestIdsFor_(reqs, recipientId) {
+  return reqs.filter((r) => splitIds_(r.targets).indexOf(recipientId) >= 0).map((r) => r.requestId);
+}
+
+/** 이 요청이 수신자의 최근 NTFY_KEEP 건 안에 있는지 (= 휴대폰에 알림이 남아 있어야 하는지) */
+function isRecentFor_(reqs, recipientId, requestId) {
+  return requestIdsFor_(reqs, recipientId).slice(-CONFIG.NTFY_KEEP).indexOf(requestId) >= 0;
+}
+
+/**
+ * 밀어내기: 최근 NTFY_KEEP 건 바로 앞(= 이번에 밀려난) 요청의 알림을 지운다.
+ * ntfy 'GET /<토픽>/<sequence_id>/delete' → 휴대폰 알림창 · ntfy 앱 목록에서 삭제. 같은 요청번호로 다시 보내면 되살아남.
+ * 1건만 지우는 이유: 새 요청마다 1건씩 밀려나므로 충분하고, ntfy.sh 하루 발송 한도(IP 당)를 아낀다.
+ */
+function ntfyPrune_(reqs, rc) {
+  if (!rc || !rc.topic) return null;
+  const ids = requestIdsFor_(reqs, rc.recipientId);
+  if (ids.length <= CONFIG.NTFY_KEEP) return null;
+  return { server: CONFIG.NTFY_SERVER, del: { topic: rc.topic, sequence_id: ids[ids.length - CONFIG.NTFY_KEEP - 1] } };
 }
 
 function ntfyBody_(rc, req, m) {

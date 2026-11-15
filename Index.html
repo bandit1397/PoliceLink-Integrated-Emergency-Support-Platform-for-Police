@@ -369,6 +369,13 @@ function sendNtfy(list) {
   });
 }
 
+// 밀어내기: 수신자 휴대폰의 오래된 요청 알림 삭제 (GET 이라 사전 확인 없음). 실패해도 화면에 알리지 않음 (콘솔에만)
+function deleteNtfy(list) {
+  (list || []).forEach((n) =>
+    fetch(n.server + '/' + encodeURIComponent(n.del.topic) + '/' + encodeURIComponent(n.del.sequence_id) + '/delete')
+      .catch((e) => console.log('ntfy delete fail', e)));
+}
+
 /* ---------- 화면 전환 ---------- */
 function hideAll() {
   ['boot', 'login', 'recipient', 'tab-board', 'tab-new', 'tab-recips', 'tab-admin'].forEach((id) => $(id).classList.add('hidden'));
@@ -590,6 +597,7 @@ $('btnSend').onclick = async () => {
   try {
     const r = await call('createRequest', token, data);
     const n = await sendNtfy(r.ntfy);
+    deleteNtfy(r.ntfyDel);   // 새 알림이 간 뒤에 오래된 알림 삭제 (휴대폰에 최근 3건만)
     save('pl_last_type', data.type); save('pl_callback', data.callback);
     $('nSum').value = ''; $('nDetail').value = ''; $('nLoc').value = '';
     toast(`요청 ${r.requestId} 등록 · 알림 ${n}/${data.targets.length}건 발송`);
