@@ -241,6 +241,7 @@
 
   <!-- ===== 수신자 (개인 링크) ===== -->
   <section id="recipient" class="hidden">
+    <div class="row hidden" id="rSwitch" style="margin:0 0 10px;align-items:center"></div>
     <div class="alarm hidden" id="rAlarm"></div>
     <div class="card hidden" id="rPush">
       <h2>📱 화면이 꺼져도 알림 받기 (최초 1회)</h2>
@@ -282,7 +283,11 @@ const STATUS_LABEL = { open: '응답 대기', assigned: '배정 · 처리 중', 
 
 let cfg = null;
 let token = load('pl_token', '');      // 직원 세션
-let rtoken = load('pl_rtoken', '');    // 수신자 개인 링크 토큰
+let rtoken = load('pl_rtoken', '');    // 지금 보고 있는 수신자 개인 링크 토큰
+// 한 휴대폰(브라우저)에 수신자 여러 개 등록 (예: 병원 응급실 + 통역원). { 수신자번호: { t: 토큰, name, type } }
+// 알림 버튼(?to=수신자번호)으로 열리면 그 번호의 토큰으로 응답 화면을 연다.
+let rtokens = load('pl_rtokens', {});
+if (!rtokens || typeof rtokens !== 'object') rtokens = {};
 let me = null;
 let mode = '';                       // 'staff' | 'recipient'
 let tab = 'board';
@@ -344,7 +349,11 @@ function armed(b, text) {
 function handleAuthError(e) {
   const m = errMsg(e);
   if (m.indexOf('SESSION_EXPIRED') >= 0) { token = ''; save('pl_token', ''); toast('로그인이 만료되었습니다. 다시 로그인하세요.'); showLogin(); return true; }
-  if (m.indexOf('RECIPIENT_INVALID') >= 0) { rtoken = ''; save('pl_rtoken', ''); toast('개인 링크가 만료되었거나 사용 중지되었습니다. 관리자에게 새 링크를 받으세요.'); showLogin(); return true; }
+  if (m.indexOf('RECIPIENT_INVALID') >= 0) {
+    toast('개인 링크가 만료되었거나 사용 중지되었습니다. 관리자에게 새 링크를 받으세요.');
+    forgetRecipient(rtoken);
+    return true;
+  }
   return false;
 }
 
@@ -416,8 +425,9 @@ $('lPin').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('btnLogi
 $('btnLogout').onclick = async () => {
   if (!armed($('btnLogout'), '한 번 더')) return;
   if (mode === 'recipient') {
-    rtoken = ''; save('pl_rtoken', '');
-    toast('이 브라우저의 수신자 등록을 해제했습니다. 다시 받으려면 개인 링크를 여세요.');
+    toast(`${rMe ? rMe.name : '수신자'} 등록을 해제했습니다. 다시 받으려면 개인 링크를 여세요.`);
+    forgetRecipient(rtoken);
+    return;
   } else {
     if (token) call('logout', token).catch(() => {});
     token = ''; save('pl_token', '');
@@ -889,6 +899,57 @@ $('btnAudit').onclick = loadAudit;
 /* ======================================================================
  * 수신자 화면 (개인 링크)
  * ==================================================================== */
+/** 이 브라우저에서 한 수신자 등록을 지운다. 다른 등록이 남아 있으면 그 화면으로, 없으면 로그인 화면으로 */
+function forgetRecipient(t) {
+  Object.keys(rtokens).forEach((id) => { if (rtokens[id].t === t) delete rtokens[id]; });
+  save('pl_rtokens', rtokens);
+  const rest = Object.keys(rtokens);
+  if (rest.length && mode === 'recipient') return switchRecipient(rest[0]);
+  rtoken = ''; save('pl_rtoken', '');
+  showLogin();
+}
+/** 등록된 다른 수신자 화면으로 전환 (상단 전환 버튼 · 알림 버튼 ?to=) */
+function switchRecipient(id) {
+  const x = rtokens[id];
+  if (!x) return;
+  rtoken = x.t; save('pl_rtoken', rtoken);
+  rMe = null; seen = null; pendingIds = []; silenced = []; reasonOpen = [];
+  $('rReqs').innerHTML = '<p class="muted">불러오는 중…</p>';
+  $('rAlarm').classList.add('hidden');
+  updateRinging();
+  refreshRecipient();
+}
+/** 상단 전환 버튼 (등록이 2개 이상일 때만). 다른 등록의 응답 대기 건수도 표시 */
+let otherPending = {};
+function renderSwitch() {
+  const ids = Object.keys(rtokens);
+  $('rSwitch').classList.toggle('hidden', ids.length < 2);
+  if (ids.length < 2) return;
+  $('rSwitch').innerHTML = '<span class="muted">이 휴대폰의 수신자:</span> ' + ids.map((id) => {
+    const x = rtokens[id], cur = rMe && rMe.recipientId === id, n = otherPending[id] || 0;
+    return `<button class="btn-sm ${cur ? 'b-blue' : n ? 'b-red' : 'btn-line'}" data-rsw="${esc(id)}">${esc(typeName(x.type))} · ${esc(x.name)}${!cur && n ? ` (대기 ${n})` : ''}</button>`;
+  }).join(' ');
+}
+// 다른 등록의 응답 대기 건수: 30초마다 (화면이 켜져 있을 때)
+let otherTick = 0;
+async function refreshOthers() {
+  const ids = Object.keys(rtokens).filter((id) => !rMe || id !== rMe.recipientId);
+  if (!ids.length) return;
+  for (const id of ids) {
+    try {
+      const d = await call('recipientView', rtokens[id].t);
+      otherPending[id] = d.items.filter((r) => r.status === 'open' && !r.mine).length;
+    } catch (e) {
+      if (errMsg(e).indexOf('RECIPIENT_INVALID') >= 0) { delete rtokens[id]; save('pl_rtokens', rtokens); }
+    }
+  }
+  renderSwitch();
+}
+$('rSwitch').onclick = (ev) => {
+  const b = ev.target.closest('button[data-rsw]');
+  if (b && (!rMe || b.dataset.rsw !== rMe.recipientId)) { wantTo = ''; switchRecipient(b.dataset.rsw); }
+};
+
 let rMe = null;
 let wantTo = '';   // 알림 버튼으로 열렸을 때 (?to=IN-005) 그 알림을 받은 수신자 번호
 function enterRecipient() {
@@ -907,6 +968,7 @@ async function refreshRecipient() {
   try { renderRecipient(await call('recipientView', rtoken)); }
   catch (e) { if (!handleAuthError(e)) toast('연결 오류: ' + errMsg(e)); }
   finally { polling = false; }
+  if (otherTick++ % 6 === 0) refreshOthers();
 }
 
 function renderRecipient(d) {
@@ -914,7 +976,12 @@ function renderRecipient(d) {
   rMe = d.me;
   $('who').innerHTML = `${esc(rMe.name)}<br>${esc(rMe.org)}`;
   if (first) {
-    if (wantTo && wantTo !== rMe.recipientId) toast(`⚠ 이 알림은 ${wantTo} 에게 온 것인데, 이 브라우저는 ${rMe.name}(${rMe.recipientId}) 로 등록되어 있습니다. 해당 개인 링크를 여세요.`);
+    rtokens[rMe.recipientId] = { t: rtoken, name: rMe.name, type: rMe.type };
+    // 같은 수신자의 옛 토큰(링크 재발급 전)은 위에서 덮어씀
+    save('pl_rtokens', rtokens); save('pl_rtoken', rtoken);
+    delete otherPending[rMe.recipientId];
+    if (wantTo && wantTo !== rMe.recipientId) toast(`⚠ 이 알림은 ${wantTo} 에게 온 것인데, 이 휴대폰에는 ${wantTo} 등록이 없습니다. ${wantTo} 의 개인 링크를 이 브라우저에서 한 번 여세요.`);
+    renderSwitch();
     $('rPush').classList.toggle('hidden', !!load('pl_ntfy_done_' + rMe.recipientId, false));
     $('rSubscribe').href = d.ntfy.link;
     $('rTopic').textContent = '구독 버튼이 안 열리면 ntfy 앱 ＋ 에서 이 토픽을 입력: ' + d.ntfy.topic;
@@ -1043,8 +1110,10 @@ function getParam() {
     cfg = await call('getConfig');
     if (!cfg.ready) { $('boot').textContent = '관리자가 아직 설치(setup)를 하지 않았습니다. README 의 설치 절차를 확인하세요.'; return; }
     const p = await getParam();
-    if (p.r) { rtoken = p.r; save('pl_rtoken', rtoken); }
     wantTo = p.to || '';
+    if (p.r) { rtoken = p.r; save('pl_rtoken', rtoken); }          // 개인 링크로 열면 그 수신자 (첫 화면에서 등록 목록에 추가)
+    else if (wantTo && rtokens[wantTo]) { rtoken = rtokens[wantTo].t; save('pl_rtoken', rtoken); }   // 알림 버튼: 그 알림을 받은 수신자
+    else if (!rtoken && Object.keys(rtokens).length) rtoken = rtokens[Object.keys(rtokens)[0]].t;
     if (rtoken) return enterRecipient();
     // 알림 버튼(?to=)으로 열었는데 이 브라우저에 수신자 등록이 없으면: 관리자 화면 대신 안내
     if (wantTo) {
