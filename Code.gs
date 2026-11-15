@@ -109,6 +109,41 @@ function whoami(token) {
   return auth_(token);
 }
 
+/** 본인 PIN 변경: 현재 PIN 확인 후 새 PIN (숫자 6~12자리). 현재 PIN 을 틀리면 로그인 실패와 같이 셈 */
+function changePin(token, oldPin, newPin) {
+  const sess = auth_(token);
+  newPin = String(newPin || '');
+  checkPinRule_(newPin);
+  const cache = CacheService.getScriptCache();
+  const failKey = 'fail_' + String(sess.userId).toLowerCase();
+  const fails = Number(cache.get(failKey)) || 0;
+  if (fails >= CONFIG.LOGIN_MAX_FAIL) throw new Error('PIN 실패가 많아 10분간 잠겼습니다.');
+  withLock_(() => {
+    const u = find_('USERS', 'userId', sess.userId);
+    if (!u || sha256_(u.salt + String(oldPin || '')) !== u.pinHash) {
+      cache.put(failKey, String(fails + 1), CONFIG.LOGIN_LOCK_SEC);
+      throw new Error('현재 PIN 이 올바르지 않습니다.');
+    }
+    if (sha256_(u.salt + newPin) === u.pinHash) throw new Error('현재 PIN 과 다른 PIN 을 입력하세요.');
+    update_('USERS', u, pinFields_(newPin));
+  });
+  cache.remove(failKey);
+  audit_(sess, 'pin_change', sess.userId, 'ok', '');
+  return true;
+}
+
+function checkPinRule_(pin) {
+  if (!/^\d{6,12}$/.test(pin)) throw new Error('PIN 은 숫자 6~12자리입니다.');
+  if (/^(\d)\1+$/.test(pin) || '01234567890123'.indexOf(pin) >= 0 || '98765432109876'.indexOf(pin) >= 0) {
+    throw new Error('같은 숫자 반복이나 연속 숫자(123456 등)는 쓸 수 없습니다.');
+  }
+}
+
+function pinFields_(pin) {
+  const salt = randomChars_('abcdefghijklmnopqrstuvwxyz0123456789', 16);
+  return { salt: salt, pinHash: sha256_(salt + pin) };
+}
+
 /** roles 를 주면 그 역할만 허용 */
 function auth_(token, roles) {
   const json = token ? CacheService.getScriptCache().get('sess_' + token) : null;
@@ -628,6 +663,24 @@ function setupDemo() {
     lines.push('가상 수신자 ' + demo.length + '곳 추가 → 관리자 화면 > 수신자 에서 개인 링크 확인');
   }
   const msg = lines.join('\n');
+  console.log(msg);
+  return msg;
+}
+
+/**
+ * 관리자 PIN 을 잊었을 때 (편집기에서 실행): admin 에 새 무작위 PIN 을 만들어 실행 로그에 보여 주고 잠금을 푼다.
+ * 로그인한 뒤 화면 위쪽 'PIN 변경' 으로 원하는 PIN 으로 바꾸면 된다.
+ */
+function resetAdminPin() {
+  const p = newPin_();
+  withLock_(() => {
+    const u = find_('USERS', 'userId', 'admin');
+    if (!u) throw new Error('admin 계정이 없습니다. setup 을 실행하세요.');
+    update_('USERS', u, { pinHash: p.pinHash, salt: p.salt, active: 'Y', role: 'admin' });
+  });
+  CacheService.getScriptCache().remove('fail_admin');
+  audit_({ userId: 'editor', role: 'admin' }, 'pin_reset', 'admin', 'ok', '편집기 resetAdminPin');
+  const msg = '관리자 계정  아이디: admin   새 PIN: ' + p.pin + '   ← 로그인 후 PIN 변경 권장';
   console.log(msg);
   return msg;
 }

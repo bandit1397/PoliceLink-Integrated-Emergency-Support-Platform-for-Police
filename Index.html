@@ -95,6 +95,7 @@
 <header>
   <h1>🚨 PoliceLink</h1>
   <span class="who" id="who"></span>
+  <button class="btn-ghost hidden" id="btnPin">PIN 변경</button>
   <button class="btn-ghost hidden" id="btnLogout">로그아웃</button>
 </header>
 <nav id="nav" class="hidden">
@@ -108,6 +109,19 @@
   <p class="muted" id="boot">불러오는 중…</p>
 
   <!-- 직원 로그인 -->
+  <!-- 직원: 본인 PIN 변경 -->
+  <div class="card hidden" id="pinBox">
+    <h2>🔑 내 PIN 변경</h2>
+    <div class="grid2">
+      <div><label class="f">현재 PIN</label><input type="password" id="pOld" inputmode="numeric" autocomplete="current-password"></div>
+      <div></div>
+      <div><label class="f">새 PIN (숫자 6~12자리)</label><input type="password" id="pNew" inputmode="numeric" autocomplete="new-password"></div>
+      <div><label class="f">새 PIN 다시 입력</label><input type="password" id="pNew2" inputmode="numeric" autocomplete="new-password"></div>
+    </div>
+    <p class="muted">같은 숫자 반복(111111)이나 연속 숫자(123456)는 쓸 수 없습니다. 현재 PIN 을 5번 틀리면 10분간 잠깁니다.</p>
+    <div class="row"><button class="b-blue" id="btnPinSave">변경</button><button class="btn-line" id="btnPinClose">닫기</button></div>
+  </div>
+
   <section id="login" class="hidden">
     <div class="card">
       <h2>직원 로그인</h2>
@@ -356,6 +370,7 @@ function hideAll() {
 function showLogin() {
   stopTimers(); hideAll(); me = null; rMe = null; mode = ''; pendingIds = []; silenced = [];
   $('who').textContent = ''; $('btnLogout').classList.add('hidden');
+  $('btnPin').classList.add('hidden'); $('pinBox').classList.add('hidden');
   $('login').classList.remove('hidden');
 }
 function stopTimers() {
@@ -379,6 +394,22 @@ $('btnLogout').onclick = async () => {
   token = ''; rtoken = ''; save('pl_token', ''); save('pl_rtoken', '');
   showLogin();
 };
+$('btnPin').onclick = () => {
+  ['pOld', 'pNew', 'pNew2'].forEach((id) => ($(id).value = ''));
+  $('pinBox').classList.remove('hidden');
+  window.scrollTo(0, 0); $('pOld').focus();
+};
+$('btnPinClose').onclick = () => $('pinBox').classList.add('hidden');
+$('btnPinSave').onclick = async () => {
+  if ($('pNew').value !== $('pNew2').value) return toast('새 PIN 두 칸이 다릅니다.');
+  const b = $('btnPinSave'); b.disabled = true;
+  try {
+    await call('changePin', token, $('pOld').value, $('pNew').value);
+    ['pOld', 'pNew', 'pNew2'].forEach((id) => ($(id).value = ''));
+    $('pinBox').classList.add('hidden');
+    toast('PIN 을 변경했습니다. 다음 로그인부터 새 PIN 을 쓰세요.');
+  } catch (e) { if (!handleAuthError(e)) toast(errMsg(e)); } finally { b.disabled = false; }
+};
 
 /* ======================================================================
  * 직원 화면
@@ -387,6 +418,7 @@ function enterStaff(user) {
   me = user; mode = 'staff'; hideAll(); seen = null;
   $('who').innerHTML = `${esc(user.name)}<br>${esc(cfg.roles[user.role])}`;
   $('btnLogout').classList.remove('hidden');
+  $('btnPin').classList.remove('hidden');
   $('nav').classList.remove('hidden');
   $('navAdmin').classList.toggle('hidden', user.role !== 'admin');
   setupNewForm();
@@ -731,7 +763,7 @@ $('rcLinkBox').onclick = async (ev) => {
 };
 
 const ACTION_LABEL = { login: '로그인', create: '요청 생성', assign: '배정', complete: '처리 완료', cancel: '취소', realert: '재알림',
-  respond: '수신자 응답', patrol_status: '순찰차 상태', user_save: '계정 저장', recipient_save: '수신자 저장', recipient_delete: '수신자 삭제' };
+  respond: '수신자 응답', patrol_status: '순찰차 상태', user_save: '계정 저장', recipient_save: '수신자 저장', recipient_delete: '수신자 삭제', pin_change: 'PIN 변경', pin_reset: '관리자 PIN 초기화' };
 async function loadAudit() {
   try {
     const list = await call('listAudit', token, 200);

@@ -226,6 +226,32 @@ assert(!JSON.stringify(G.listUsers(admin)).includes('pinHash'));
 assert(/^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d$/.test(sheets.REQUESTS.data[1][1]), 'time format ' + sheets.REQUESTS.data[1][1]);
 assert.strictEqual(G.find_('REQUESTS', 'requestId', id).createdAt, Date.parse('2026-11-15T10:00:00+09:00'));
 
+// 본인 PIN 변경 · 관리자 PIN 초기화
+{
+  const s = G.login('sit02', rp.pin).token;
+  throws(() => G.changePin(s, '000000', '482913'), /현재 PIN/);
+  throws(() => G.changePin(s, rp.pin, '12345'), /6~12/);
+  throws(() => G.changePin(s, rp.pin, '111111'), /반복이나 연속/);
+  throws(() => G.changePin(s, rp.pin, '234567'), /반복이나 연속/);
+  throws(() => G.changePin(s, rp.pin, '987654'), /반복이나 연속/);
+  throws(() => G.changePin(s, rp.pin, rp.pin), /다른 PIN/);
+  G.changePin(s, rp.pin, '482913');
+  throws(() => G.login('sit02', rp.pin), /올바르지/);
+  assert(G.login('sit02', '482913').token);
+  throws(() => G.changePin('bogus', '482913', '590174'), /SESSION_EXPIRED/);
+  // 현재 PIN 5번 틀리면 잠김
+  for (let i = 0; i < 5; i++) { try { G.changePin(s, '000000', '590174'); } catch (e) {} }
+  throws(() => G.changePin(s, '482913', '590174'), /잠겼/);
+  // resetAdminPin: 새 PIN 으로 로그인, 옛 PIN 거부
+  const msg = G.resetAdminPin();
+  const np = msg.match(/새 PIN: (\d{6})/)[1];
+  throws(() => G.login('admin', pins.admin), /올바르지/);
+  assert(G.login('admin', np).token);
+  pins.admin = np;
+  const acts = G.listAudit(G.login('admin', np).token, 50).map((a) => a.action);
+  assert(acts.includes('pin_change') && acts.includes('pin_reset'));
+}
+
 // 순번 · 추가 · 삭제
 {
   assert.strictEqual(G.nextRecipientSeq(admin, 'interpreter'), 5);
