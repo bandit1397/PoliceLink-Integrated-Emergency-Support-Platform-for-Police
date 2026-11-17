@@ -1038,7 +1038,8 @@ function renderRecipient(d) {
 }
 
 function updateRinging() {
-  const on = rMe && !$('recipient').classList.contains('hidden') && pollTimer && pendingIds.some((id) => !silenced.includes(id));
+  // 화면이 뒤에 있을 때(다른 앱 · ntfy 화면)는 울리지 않음 — 그때는 ntfy 알람이 담당하고, 이 화면은 새로 고침도 멈춰 있음
+  const on = rMe && !document.hidden && !$('recipient').classList.contains('hidden') && pollTimer && pendingIds.some((id) => !silenced.includes(id));
   if (on && !ringTimer) { beep(); ringTimer = setInterval(beep, RING_MS); }
   else if (!on && ringTimer) { clearInterval(ringTimer); ringTimer = null; }
 }
@@ -1080,12 +1081,17 @@ $('rReqs').onclick = async (ev) => {
     // 응답을 먼저 보내고(요청 시작), 같은 터치 안에서 ntfy 화면을 열어 휴대폰 알람을 멈춘다.
     // ntfy 화면은 터치 직후에만 열 수 있어 응답 완료를 기다리지 않는다. 뒤로 가기로 이 화면에 돌아옴.
     const sent = call('recipientRespond', rtoken, b.dataset.id, b.dataset.st, note);
+    // 이 화면의 소리도 바로 끈다 (ntfy 화면이 열리면 이 화면은 뒤로 가서 새로 고침이 멈추므로 기다리면 계속 울림)
+    silenced = silenced.concat(b.dataset.id); updateRinging();
     if (b.dataset.st === 'accept' || b.dataset.st === 'reject') stopNtfyAlarm([b.dataset.id]);
     await sent;
     reasonOpen = reasonOpen.filter((x) => x !== b.dataset.id);
     toast(`'${respLabel(rMe.type, b.dataset.st)}${note ? ' · ' + note : ''}' 응답을 보냈습니다.`);
     refreshRecipient();
-  } catch (e) { if (!handleAuthError(e)) toast(errMsg(e)); all.forEach((x) => (x.disabled = false)); }
+  } catch (e) {
+    silenced = silenced.filter((x) => x !== b.dataset.id); updateRinging();   // 응답 실패 → 다시 울림
+    if (!handleAuthError(e)) toast(errMsg(e)); all.forEach((x) => (x.disabled = false));
+  }
 };
 $('rPatrolBtns').onclick = async (ev) => {
   const b = ev.target.closest('button[data-ps]');
@@ -1098,6 +1104,7 @@ $('btnPushDone').onclick = () => { if (rMe) save('pl_ntfy_done_' + rMe.recipient
 $('lnkPush').onclick = (ev) => { ev.preventDefault(); $('rPush').classList.remove('hidden'); $('rPush').scrollIntoView({ behavior: 'smooth' }); };
 
 document.addEventListener('visibilitychange', () => {
+  if (mode === 'recipient') updateRinging();   // 뒤로 가면 소리 끔, 돌아오면 (아직 대기 중이면) 다시 울림
   if (document.hidden || !pollTimer) return;
   mode === 'recipient' ? refreshRecipient() : refreshBoard();
 });
