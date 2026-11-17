@@ -9,7 +9,8 @@
  *    → 서버는 ntfy 메시지 내용만 만들어 돌려주고, **요청을 보낸 직원의 브라우저가** ntfy.sh 로 POST 한다.
  *    → 미응답 재알림도 상황판(관제 PC) 브라우저가 1분마다 서버에 물어보고 보낸다.
  *  - 알림에는 요청번호 · 유형 · 긴급도만 담는다 (사건 내용 · 위치 · 개인정보 없음).
- *  - 알림에 click 을 넣지 않는다 (넣으면 눌러도 ntfy 계속 울림이 멈추지 않음, 2026-10-25 확인).
+ *  - 알림 click = 웹앱 응답 화면. click 으로는 ntfy 계속 울림이 멈추지 않으므로 (2026-10-25 확인)
+ *    웹앱의 응답 버튼 · 빨간 배너가 ntfy 화면을 잠깐 열어 멈춘다 (2026-11-17 변경).
  *
  * ⚠ 시험판: 가상 데이터만 넣을 것. 실제 사건 정보 · 개인정보 입력 금지.
  */
@@ -595,7 +596,7 @@ function ntfyAlarm_(req, rc, prefix) {
   const urgent = req.urgency === '긴급';
   return ntfyBody_(rc, req, {
     title: `${prefix}[${req.urgency}] ${t.label} 요청`,
-    message: `요청 ${req.requestId}. 이 알림을 누르면 알람이 멈춥니다.`,
+    message: `요청 ${req.requestId}. 누르면 PoliceLink 응답 화면이 열립니다 (응답하면 알람이 멈춤).`,
     priority: urgent ? 5 : 4,
     tags: urgent ? ['rotating_light', t.tag] : [t.tag],
   });
@@ -638,10 +639,13 @@ function ntfyPrune_(reqs, rc) {
 function ntfyBody_(rc, req, m) {
   const url = appUrl_();
   const body = Object.assign({ topic: rc.topic, sequence_id: req.requestId }, m);
-  // click 은 넣지 않는다. 알림 본문 → ntfy 화면(알람 멈춤) → 버튼 → 웹앱.
+  // 알림을 누르면 바로 웹앱 응답 화면 (click). ntfy 계속 울리기는 click 으로는 안 멈추므로(ntfy 화면이 열리거나
+  // 알림을 밀어 지울 때만 멈춤) 웹앱의 응답 버튼 · 빨간 배너가 ntfy:// 를 열어 멈춘다 (2026-11-17 변경, 이전: click 없음).
   // 웹앱 주소에 개인 토큰은 넣지 않고(ntfy.sh 에 남으므로), 비밀이 아닌 수신자 번호만 붙인다(?to=IN-005).
   // 화면은 ?to= 가 있으면 관리자 로그인이 남아 있어도 그 브라우저에 등록된 수신자 응답 화면을 연다.
-  if (url) body.actions = [{ action: 'view', label: 'PoliceLink 열기', url: url + '?to=' + encodeURIComponent(rc.recipientId), clear: true }];
+  if (url) body.click = url + '?to=' + encodeURIComponent(rc.recipientId);
+  // 알림창에서 바로 알람만 끄는 버튼 (ntfy 화면 열기 = 알람 멈춤)
+  body.actions = [{ action: 'view', label: '알람 끄기', url: 'ntfy://' + CONFIG.NTFY_SERVER.replace(/^https?:\/\//, '') + '/' + rc.topic }];
   return { server: CONFIG.NTFY_SERVER, body: body };
 }
 

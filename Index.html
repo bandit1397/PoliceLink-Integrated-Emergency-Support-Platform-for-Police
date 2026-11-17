@@ -992,7 +992,7 @@ function renderRecipient(d) {
   $('rPatrol').classList.toggle('hidden', !isPatrol);
   if (isPatrol) $('rPatrolBtns').innerHTML = cfg.patrolStatus.map((s) =>
     `<button class="${rMe.status === s ? 'b-blue' : 'btn-line'}" data-ps="${esc(s)}">${esc(s)}</button>`).join('');
-  $('rInfo').textContent = `${typeName(rMe.type)} · 이 화면이 켜져 있으면 응답할 때까지 소리 · 진동이 울립니다 (처음 한 번 화면을 터치해야 소리가 남).`;
+  $('rInfo').textContent = `${typeName(rMe.type)} · 이 화면이 켜져 있으면 응답할 때까지 소리 · 진동이 울립니다 (처음 한 번 화면을 터치해야 소리가 남). 휴대폰 알람은 응답 버튼을 누르면 멈춥니다 — ntfy 화면이 잠깐 열리면 뒤로 가기로 돌아오세요.`;
 
   const now = d.now;
   const pend = d.items.filter((r) => r.status === 'open' && !r.mine);
@@ -1064,8 +1064,7 @@ $('rReqs').onclick = async (ev) => {
   const b = ev.target.closest('button[data-st]');
   if (!b) return;
   if (b.dataset.st === 'done' && !armed(b, '한 번 더 누르면 완료')) return;
-  stopNtfyAlarm([b.dataset.id]);
-  // 사유가 있는 유형(병원 '수용 불가'): 먼저 사유 버튼을 펼친다
+  // 사유가 있는 유형(병원 '수용 불가'): 먼저 사유 버튼을 펼친다 (알람은 사유를 골라 보낼 때 멈춤)
   if (b.dataset.ask) {
     const box = b.closest('.card').querySelector('.reasons');
     if (box) {
@@ -1078,7 +1077,11 @@ $('rReqs').onclick = async (ev) => {
   all.forEach((x) => (x.disabled = true));
   try {
     const note = b.dataset.note || '';
-    await call('recipientRespond', rtoken, b.dataset.id, b.dataset.st, note);
+    // 응답을 먼저 보내고(요청 시작), 같은 터치 안에서 ntfy 화면을 열어 휴대폰 알람을 멈춘다.
+    // ntfy 화면은 터치 직후에만 열 수 있어 응답 완료를 기다리지 않는다. 뒤로 가기로 이 화면에 돌아옴.
+    const sent = call('recipientRespond', rtoken, b.dataset.id, b.dataset.st, note);
+    if (b.dataset.st === 'accept' || b.dataset.st === 'reject') stopNtfyAlarm([b.dataset.id]);
+    await sent;
     reasonOpen = reasonOpen.filter((x) => x !== b.dataset.id);
     toast(`'${respLabel(rMe.type, b.dataset.st)}${note ? ' · ' + note : ''}' 응답을 보냈습니다.`);
     refreshRecipient();
