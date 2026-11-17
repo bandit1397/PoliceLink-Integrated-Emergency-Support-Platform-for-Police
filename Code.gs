@@ -34,7 +34,7 @@ const CONFIG = {
   PATROL_STATUS: ['가용', '출동중', '휴식'],
   LANGUAGES: ['영어', '중국어', '베트남어', '러시아어', '일본어', '태국어', '몽골어', '아랍어', '기타'],
   ROLES: { admin: '관리자', dispatcher: '상황관리자', officer: '현장 경찰관' },
-  REALERT_MIN: 3,       // 응답이 없으면 3분마다
+  REALERT_MIN: 1,       // 응답이 없으면 1분마다 (2026-11-17, 이전 3분)
   REALERT_MAX: 3,       // 최대 3번 다시 알림
   NTFY_KEEP: 3,         // 수신자 휴대폰에 남기는 요청 알림 수. 새 요청이 오면 오래된 것부터 ntfy 에서 삭제 (밀어내기)
   SESSION_SEC: 21600,   // 직원 로그인 유지 6시간 (CacheService 최대)
@@ -339,15 +339,18 @@ function closeRequest(token, requestId, outcome) {
     .map((id) => ntfyInfo_(req, recips[id], '요청이 취소되었습니다.', 2)).filter(Boolean) };
 }
 
+/** 재알림 간격. 상황판이 15초마다 묻는 시각이 조금씩 어긋나도 한 바퀴 더 기다리지 않게 5초 여유 */
+function realertGapMs_() { return CONFIG.REALERT_MIN * 60000 - 5000; }
+
 /**
- * 상황판 브라우저가 1분마다 호출: 응답이 없는 대상에게 다시 보낼 ntfy 메시지.
+ * 상황판 브라우저가 15초마다 호출: 응답이 없는 대상에게 다시 보낼 ntfy 메시지.
  * 여러 PC 가 동시에 상황판을 열어도 잠금 + lastAlertAt 으로 한 번만 나간다.
  */
 function pendingRealerts(token) {
   const sess = auth_(token, ['admin', 'dispatcher']);
   const now = Date.now();
   const due = rows_('REQUESTS').filter((r) => r.status === 'open' &&
-    Number(r.realertCount) < CONFIG.REALERT_MAX && now - r.lastAlertAt >= CONFIG.REALERT_MIN * 60000);
+    Number(r.realertCount) < CONFIG.REALERT_MAX && now - r.lastAlertAt >= realertGapMs_());
   if (!due.length) return [];
   const msgs = [];
   const logs = [];
@@ -357,7 +360,7 @@ function pendingRealerts(token) {
     const all = rows_('REQUESTS', true);
     due.forEach((d) => {
       const r = find_('REQUESTS', 'requestId', d.requestId);
-      if (!r || r.status !== 'open' || now - r.lastAlertAt < CONFIG.REALERT_MIN * 60000) return;
+      if (!r || r.status !== 'open' || now - r.lastAlertAt < realertGapMs_()) return;
       const n = Number(r.realertCount) + 1;
       // 휴대폰에서 밀려나 지워진(최근 NTFY_KEEP 건 밖) 요청은 다시 울리지 않는다
       const silent = splitIds_(r.targets).filter((id) => !latest[r.requestId + '|' + id] && isRecentFor_(all, id, r.requestId));

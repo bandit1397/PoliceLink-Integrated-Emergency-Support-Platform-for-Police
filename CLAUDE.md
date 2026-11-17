@@ -25,7 +25,7 @@
 - 통역 요청 대상 = `detail`(가능 언어, 쉼표 구분)에 요청 언어가 있는 통역원 (`candidates`)
 - 권역(응급실 · 통역원): RECIPIENTS.zone = `CONFIG.REGIONS` 중 하나 이상(비면 전체 구역). 요청에서 권역 안 고르면 전체
 - ntfy: 서버는 메시지 내용만 만들고 **브라우저가 ntfy.sh 로 POST** (Apps Script → ntfy.sh 차단). `sequence_id` = 요청번호. click = 웹앱 `?to=` (버전 14~). click 으로는 계속 울리기가 안 멈춤 → 웹앱 응답 버튼 · 빨간 배너가 터치 순간 `ntfy://` 를 열어 멈춤 (ntfy 는 토픽 화면 열림 · 알림 지우기 때만 멈춤). 알림 버튼 = '알람 끄기'(ntfy://). 긴급=우선순위 5, 보통=4
-- 재알림: 상황판(admin/dispatcher) 브라우저가 1분마다 `pendingRealerts` (3분 간격 · 최대 3회)
+- 재알림: 상황판(admin/dispatcher) 브라우저가 15초마다 `pendingRealerts` (1분 간격 · 최대 3회, 버전 18~. 창이 뒤에 있어도 확인 — 브라우저가 1분에 1번 정도로 늦춤)
 - 외부 기관에는 `detail`(내부 메모) · `requesterId` · 경찰관 이름을 보내지 않음 (`publicRequest_`, `orgsByUser_`, `CONFIG.TYPES.*.internal`)
 
 ## 코드를 바꿀 때 (배포까지 Claude 가 함 — 사용자가 요청함)
