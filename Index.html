@@ -260,7 +260,7 @@
         (ntfy 화면이 잠깐 열림 → <b>뒤로 가기</b>로 이 화면에 돌아옴). 응답 없이 알람만 끄려면 알림의 <b>알람 끄기</b> 버튼.</p>
       <p class="muted">이 구독 주소는 <b>나에게만</b> 오는 알림입니다. 다른 사람에게 알려 주지 마세요. 알림에는 요청번호 · 유형 · 긴급도만 담깁니다.</p>
       <p class="muted" id="rTopic"></p>
-      <button class="btn-line" id="btnPushDone">확인 — 이 안내 숨기기</button>
+      <button class="btn-line" id="btnPushDone">닫기</button>
     </div>
     <div class="card hidden" id="rPatrol">
       <h2>🚓 내 상태</h2>
@@ -982,7 +982,7 @@ function renderRecipient(d) {
     delete otherPending[rMe.recipientId];
     if (wantTo && wantTo !== rMe.recipientId) toast(`⚠ 이 알림은 ${wantTo} 에게 온 것인데, 이 휴대폰에는 ${wantTo} 등록이 없습니다. ${wantTo} 의 개인 링크를 이 브라우저에서 한 번 여세요.`);
     renderSwitch();
-    $('rPush').classList.toggle('hidden', !!load('pl_ntfy_done_' + rMe.recipientId, false));
+    showPush(false);   // 설정 안내는 처음엔 닫아 둠 — 아래 '📱 화면 꺼짐 알림 설정 보기' 로 열기
     $('rSubscribe').href = d.ntfy.link;
     $('rTopic').textContent = '구독 버튼이 안 열리면 ntfy 앱 ＋ 에서 이 토픽을 입력: ' + d.ntfy.topic;
     ntfyLink = d.ntfy.link;
@@ -1100,8 +1100,17 @@ $('rPatrolBtns').onclick = async (ev) => {
   catch (e) { if (!handleAuthError(e)) toast(errMsg(e)); }
 };
 $('btnRestoreFile').onclick = () => rMe && downloadNtfyRestore(Object.assign({}, rMe, { topic: rTopicName }));
-$('btnPushDone').onclick = () => { if (rMe) save('pl_ntfy_done_' + rMe.recipientId, true); $('rPush').classList.add('hidden'); };
-$('lnkPush').onclick = (ev) => { ev.preventDefault(); $('rPush').classList.remove('hidden'); $('rPush').scrollIntoView({ behavior: 'smooth' }); };
+function showPush(on) {
+  $('rPush').classList.toggle('hidden', !on);
+  $('lnkPush').textContent = on ? '📱 화면 꺼짐 알림 설정 닫기' : '📱 화면 꺼짐 알림 설정 보기';
+}
+$('btnPushDone').onclick = () => showPush(false);
+$('lnkPush').onclick = (ev) => {
+  ev.preventDefault();
+  const on = $('rPush').classList.contains('hidden');
+  showPush(on);
+  if (on) $('rPush').scrollIntoView({ behavior: 'smooth' });
+};
 
 document.addEventListener('visibilitychange', () => {
   if (mode === 'recipient') updateRinging();   // 뒤로 가면 소리 끔, 돌아오면 (아직 대기 중이면) 다시 울림
