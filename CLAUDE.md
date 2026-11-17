@@ -24,7 +24,7 @@
   삭제 = `active='D'` + 토큰 교체 (행 유지). `active==='Y'` 만 후보 · 로그인 가능
 - 통역 요청 대상 = `detail`(가능 언어, 쉼표 구분)에 요청 언어가 있는 통역원 (`candidates`)
 - 권역(응급실 · 통역원): RECIPIENTS.zone = `CONFIG.REGIONS` 중 하나 이상(비면 전체 구역). 요청에서 권역 안 고르면 전체
-- ntfy: 서버는 메시지 내용만 만들고 **브라우저가 ntfy.sh 로 POST** (Apps Script → ntfy.sh 차단). `sequence_id` = 요청번호. **click 넣지 말 것** (계속 울리기가 안 멈춤). 긴급=우선순위 5, 보통=4
+- ntfy: 서버는 메시지 내용만 만들고 **브라우저가 ntfy.sh 로 POST** (Apps Script → ntfy.sh 차단). `sequence_id` = 요청번호. click = 웹앱 `?to=` (버전 14~). click 으로는 계속 울리기가 안 멈춤 → 웹앱 응답 버튼 · 빨간 배너가 터치 순간 `ntfy://` 를 열어 멈춤 (ntfy 는 토픽 화면 열림 · 알림 지우기 때만 멈춤). 알림 버튼 = '알람 끄기'(ntfy://). 긴급=우선순위 5, 보통=4
 - 재알림: 상황판(admin/dispatcher) 브라우저가 1분마다 `pendingRealerts` (3분 간격 · 최대 3회)
 - 외부 기관에는 `detail`(내부 메모) · `requesterId` · 경찰관 이름을 보내지 않음 (`publicRequest_`, `orgsByUser_`, `CONFIG.TYPES.*.internal`)
 
@@ -59,7 +59,7 @@
 
 ## 배포 기록 (모두 같은 /exec 주소)
 
-| 버전 | 시각 (2026-11-15) | 커밋 | 내용 |
+| 버전 | 시각 (13 까지 2026-11-15) | 커밋 | 내용 |
 |---|---|---|---|
 | 1 | 12:11 | `7e5a07c` 무렵 (코드는 첫 커밋) | 1차 시험판. `setupDemo` 실행(권한 승인은 사용자 요청으로 Claude 가 진행) |
 | 2 | 12:36 | `9ebf291` | 외부 기관 화면에 경찰관 이름 대신 소속 |
@@ -74,6 +74,8 @@
 | 11 | 20:32 | `da06677` | ntfy 복원 파일 버튼: `ntfyRestoreJson` · `downloadNtfyRestore` (관리자 `data-rcfile`, 수신자 `btnRestoreFile`). Apps Script iframe 은 `allow-downloads` 있음 → blob 다운로드 가능. Index.html 만 변경 |
 | 12 | 21:04 | `d26046f` | **고침**: 버전 11 부터 웹앱이 '불러오는 중…' 에서 멈춤. HtmlService 가 `<script>` 안 `//` 뒤를 주석으로 지워 `'https://ntfy.sh'` → `'https:` (문법 오류). `'https:\/\/ntfy.sh'` 로 고치고 시험 추가 |
 | 13 | 21:16 | `e0d598d` | 한 휴대폰에 수신자 여러 개: localStorage `pl_rtokens` {수신자번호: {t, name, type}}. `?to=` 면 그 등록으로 열기, 2개 이상이면 `rSwitch` 전환 버튼 + 다른 등록 대기 건수(30초). 등록 해제 · 만료는 그 등록만 (`forgetRecipient`) |
+| 14 | 11-17 12:01 | `6cabdcc` | **알람 순서**: 알림 누름 → 바로 응답 화면(알람 계속) → 응답 버튼 = 응답 + 알람 멈춤(ntfy 화면 잠깐 → 뒤로). 응답 전송을 먼저 시작하고 같은 터치에서 `stopNtfyAlarm` (터치 직후에만 ntfy:// 열림). 수락 · 거절만. 사유 펼치기는 안 멈춤 |
+| 15 | 11-17 | (이 커밋) | 수신자 화면 안내문 · 설정 PDF 를 새 알람 순서로 |
 
 ## 현재 데이터 · 휴대폰 상태 (2026-11-15 15시 무렵)
 
