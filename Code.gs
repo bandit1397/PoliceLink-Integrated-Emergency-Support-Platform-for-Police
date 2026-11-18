@@ -592,6 +592,9 @@ function recipientAuth_(rtoken) {
  * ntfy 메시지 (브라우저가 그대로 ntfy.sh 에 POST)
  * ==================================================================== */
 
+/** ntfy 알림 · ntfy 화면 요청 카드의 '돌아가기' 버튼 문구. 버튼 색은 ntfy 앱이 정해 바꿀 수 없어 빨간 이모지로 강조 (2026-11-18) */
+const RETURN_LABEL = '🔴 PoliceLink로 돌아가기 (필수)';
+
 /**
  * 새 요청 · 재알림: 긴급 · 보통 모두 우선순위 5 ('계속 울리기' 대상).
  * 안드로이드 알림창은 중요도가 먼저, 같은 중요도 안에서만 최신이 위 → 우선순위가 다르면 예전 긴급이 새 보통보다 위에 남음.
@@ -603,7 +606,7 @@ function ntfyAlarm_(req, rc, prefix) {
   const urgent = req.urgency === '긴급';
   return ntfyBody_(rc, req, {
     title: `${prefix}[${req.urgency}] ${t.label} 요청`,
-    message: `요청 ${req.requestId}. 누르면 PoliceLink 응답 화면이 열립니다 (응답하면 알람이 멈춤).`,
+    message: `요청 ${req.requestId}. 누르면 PoliceLink 응답 화면이 열립니다 (응답하면 알람이 멈춤).\n⚠ 응답한 뒤 아래 '${RETURN_LABEL}'를 반드시 누르세요.`,
     priority: 5,
     tags: urgent ? ['rotating_light', t.tag] : [t.tag],
   });
@@ -655,7 +658,7 @@ function ntfyBody_(rc, req, m) {
   body.actions = [{ action: 'view', label: '알람 끄기', url: 'ntfy://' + CONFIG.NTFY_SERVER.replace(/^https?:\/\//, '') + '/' + rc.topic }];
   // ntfy 는 알림 버튼을 토픽 화면의 요청 카드에도 보여 준다 → 응답 후 열린 ntfy 화면에서 PoliceLink 로 돌아오는 버튼 (2026-11-18).
   // 자동 복귀는 ntfy 구조상 불가. 크롬 새 탭으로 열림 (뒤로 가기가 더 빠름)
-  if (body.click) body.actions.push({ action: 'view', label: '↩ PoliceLink로 돌아가기', url: body.click });
+  if (body.click) body.actions.push({ action: 'view', label: RETURN_LABEL, url: body.click });
   return { server: CONFIG.NTFY_SERVER, body: body };
 }
 

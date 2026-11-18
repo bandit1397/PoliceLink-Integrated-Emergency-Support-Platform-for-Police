@@ -259,7 +259,7 @@
       </ol>
       <p><b>🔕 알람 끄기:</b> 알림을 <b>누르면</b> 바로 이 응답 화면이 열립니다 (알람은 계속 울림) → <b>응답 버튼</b>을 누르면 알람이 멈춥니다 (빨간 배너는 이 화면 소리만 끔)
         (ntfy 화면이 잠깐 열림 → <b>뒤로 가기</b>로 이 화면에 돌아옴). 응답 없이 알람만 끄려면 알림의 <b>알람 끄기</b> 버튼.</p>
-      <p class="back-hint">⚠ ntfy 화면이 열리면 반드시 ◀ <b>뒤로 가기</b> (또는 요청 카드의 <b>↩ PoliceLink로 돌아가기</b> 버튼)로 나오세요. ntfy 화면을 열어 두면 <b>다음 알림이 휴대폰 알림창에 뜨지 않습니다.</b>
+      <p class="back-hint">⚠ ntfy 화면이 열리면 반드시 ◀ <b>뒤로 가기</b> (또는 요청 카드의 <b>🔴 PoliceLink로 돌아가기 (필수)</b> 버튼)로 나오세요. ntfy 화면을 열어 두면 <b>다음 알림이 휴대폰 알림창에 뜨지 않습니다.</b>
         (ntfy 앱 구조상 자동으로 돌아올 수 없음)</p>
       <p class="muted">이 구독 주소는 <b>나에게만</b> 오는 알림입니다. 다른 사람에게 알려 주지 마세요. 알림에는 요청번호 · 유형 · 긴급도만 담깁니다.</p>
       <p class="muted" id="rTopic"></p>
@@ -1015,7 +1015,7 @@ function renderRecipient(d) {
     if (open) body = `<div class="actions">
         <button class="b-green" data-id="${esc(r.requestId)}" data-st="accept">${esc(t.accept)}</button>
         <button class="b-red" data-id="${esc(r.requestId)}" data-st="reject"${t.reasons ? ' data-ask="1"' : ''}>${esc(t.reject)}</button></div>
-        ${IS_ANDROID && !mine ? '<div class="back-hint">⚠ 응답하면 ntfy 화면이 열리며 알람이 멈춥니다 → ◀ <b>뒤로 가기</b> 또는 <b>↩ PoliceLink로 돌아가기</b> 버튼으로 꼭 돌아오세요 (ntfy 화면을 열어 두면 다음 알림이 안 뜸)</div>' : ''}
+        ${IS_ANDROID && !mine ? '<div class="back-hint">⚠ 응답하면 ntfy 화면이 열리며 알람이 멈춥니다 → ◀ <b>뒤로 가기</b> 또는 <b>🔴 PoliceLink로 돌아가기 (필수)</b> 버튼으로 꼭 돌아오세요 (ntfy 화면을 열어 두면 다음 알림이 안 뜸)</div>' : ''}
         ${t.reasons ? `<div class="reasons${reasonOpen.includes(r.requestId) ? '' : ' hidden'}"><div class="muted">${esc(t.reject)} 사유를 고르세요</div>
           <div class="row">${t.reasons.map((x) => `<button class="btn-sm b-red" data-id="${esc(r.requestId)}" data-st="reject" data-note="${esc(x)}">${esc(x)}</button>`).join('')}</div></div>` : ''}
         ${mine ? `<div class="banner info">내 응답: <span class="st ${mine}">${esc(respText(r.type, r.mine))}</span> · ${r.type === 'hospital' ? '이송 결정' : '배정'}을 기다리는 중 (바꿀 수 있음)</div>` : ''}`;
