@@ -123,7 +123,9 @@ const n0 = created.ntfy[0].body;
 assert.strictEqual(n0.priority, 5); assert.strictEqual(n0.sequence_id, created.requestId);
 // 알림 누르기 = 웹앱 응답 화면 (수신자 번호만, 토큰 없음) · 버튼 = ntfy 화면(알람 끄기)
 assert(/\/exec\?to=PT-00[12]$/.test(n0.click) && !n0.click.includes('?r='), 'click has recipient id, no token: ' + n0.click);
-assert.strictEqual(n0.actions.length, 1); assert.strictEqual(n0.actions[0].url, 'ntfy://ntfy.sh/' + G.find_('RECIPIENTS', 'recipientId', n0.click.slice(-6)).topic, 'alarm-stop action opens own topic');
+assert.strictEqual(n0.actions.length, 2);
+// 두 번째 버튼: ntfy 화면(요청 카드)에서 PoliceLink 응답 화면으로 돌아오기 = click 과 같은 주소 (토큰 없음)
+assert.strictEqual(n0.actions[1].label, '↩ PoliceLink로 돌아가기'); assert.strictEqual(n0.actions[1].url, n0.click); assert.strictEqual(n0.actions[0].url, 'ntfy://ntfy.sh/' + G.find_('RECIPIENTS', 'recipientId', n0.click.slice(-6)).topic, 'alarm-stop action opens own topic');
 assert(!JSON.stringify(n0).includes('주취자') && !JSON.stringify(n0).includes('A구역'), 'no case detail in ntfy');
 const id = created.requestId;
 const reqRow = G.find_('REQUESTS', 'requestId', id);

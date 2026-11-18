@@ -653,6 +653,9 @@ function ntfyBody_(rc, req, m) {
   if (url) body.click = url + '?to=' + encodeURIComponent(rc.recipientId);
   // 알림창에서 바로 알람만 끄는 버튼 (ntfy 화면 열기 = 알람 멈춤)
   body.actions = [{ action: 'view', label: '알람 끄기', url: 'ntfy://' + CONFIG.NTFY_SERVER.replace(/^https?:\/\//, '') + '/' + rc.topic }];
+  // ntfy 는 알림 버튼을 토픽 화면의 요청 카드에도 보여 준다 → 응답 후 열린 ntfy 화면에서 PoliceLink 로 돌아오는 버튼 (2026-11-18).
+  // 자동 복귀는 ntfy 구조상 불가. 크롬 새 탭으로 열림 (뒤로 가기가 더 빠름)
+  if (body.click) body.actions.push({ action: 'view', label: '↩ PoliceLink로 돌아가기', url: body.click });
   return { server: CONFIG.NTFY_SERVER, body: body };
 }
 
