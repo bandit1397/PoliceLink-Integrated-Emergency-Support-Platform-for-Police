@@ -256,7 +256,7 @@
           → ntfy 구독 설정 → <b>즉시 전달(Instant delivery)</b> 켜기 · <b>배터리 최적화</b> 해제
           → ntfy 설정 → <b>Keep alerting for highest priority</b> 켜기 (새 요청은 긴급 · 보통 모두 응답할 때까지 계속 울림, 알림창은 새 요청이 맨 위).</li>
       </ol>
-      <p><b>🔕 알람 끄기:</b> 알림을 <b>누르면</b> 바로 이 응답 화면이 열립니다 (알람은 계속 울림) → <b>응답 버튼</b>(또는 빨간 배너)을 누르면 알람이 멈춥니다
+      <p><b>🔕 알람 끄기:</b> 알림을 <b>누르면</b> 바로 이 응답 화면이 열립니다 (알람은 계속 울림) → <b>응답 버튼</b>을 누르면 알람이 멈춥니다 (빨간 배너는 이 화면 소리만 끔)
         (ntfy 화면이 잠깐 열림 → <b>뒤로 가기</b>로 이 화면에 돌아옴). 응답 없이 알람만 끄려면 알림의 <b>알람 끄기</b> 버튼.</p>
       <p class="muted">이 구독 주소는 <b>나에게만</b> 오는 알림입니다. 다른 사람에게 알려 주지 마세요. 알림에는 요청번호 · 유형 · 긴급도만 담깁니다.</p>
       <p class="muted" id="rTopic"></p>
@@ -1001,7 +1001,7 @@ function renderRecipient(d) {
   const openIds = d.items.filter((r) => r.status === 'open').map((r) => r.requestId);
   const fresh = seen ? openIds.filter((id) => !seen.includes(id)) : [];
   $('rAlarm').textContent = `🚨 응답 대기 ${pend.length}건 — 응답 버튼을 눌러 주세요` +
-    (pendingIds.every((id) => silenced.includes(id)) ? ' (소리 꺼짐)' : ' · 여기를 누르면 소리가 꺼집니다');
+    (pendingIds.every((id) => silenced.includes(id)) ? ' (이 화면 소리 꺼짐)' : ' · 여기를 누르면 이 화면 소리만 꺼집니다');
   $('rAlarm').classList.toggle('hidden', !pend.length);
   updateRinging();
 
@@ -1055,11 +1055,14 @@ function stopNtfyAlarm(ids) {
   a.href = ntfyLink; a.target = '_blank'; a.click();
 }
 
+// 빨간 배너: 이 화면의 소리만 끄고 첫 응답 대기 요청으로 이동. ntfy 화면은 열지 않음 (2026-11-18 변경)
+// → 휴대폰(ntfy) 알람은 아래 응답 버튼을 눌러야 멈춘다.
 $('rAlarm').onclick = () => {
   silenced = pendingIds.slice();
   updateRinging();
-  $('rAlarm').textContent = `🚨 응답 대기 ${pendingIds.length}건 — 응답 버튼을 눌러 주세요 (소리 꺼짐)`;
-  stopNtfyAlarm(pendingIds);
+  $('rAlarm').textContent = `🚨 응답 대기 ${pendingIds.length}건 — 아래 응답 버튼을 누르면 휴대폰 알람이 멈춥니다 (이 화면 소리 꺼짐)`;
+  const card = document.querySelector('#rReqs .card.pending');
+  if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
 };
 let reasonOpen = [];   // 사유 버튼을 펼친 요청번호
 $('rReqs').onclick = async (ev) => {
