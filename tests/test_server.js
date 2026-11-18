@@ -434,6 +434,6 @@ assert.strictEqual(G.rows_('USERS', true).length, 4);
   // 빨간 응답 대기 배너는 ntfy 화면을 열지 않음 (휴대폰 알람은 응답 버튼으로만 멈춤, 2026-11-18)
   const banner = code.match(/\$\('rAlarm'\)\.onclick = \(\) => \{([\s\S]*?)\n\};/);
   assert(banner && !banner[1].includes('stopNtfyAlarm'), 'banner must not open ntfy');
-  assert(code.includes("if (b.dataset.st === 'accept' || b.dataset.st === 'reject') stopNtfyAlarm(")), 'response buttons stop ntfy alarm');
+  assert(code.includes("if (b.dataset.st === 'accept' || b.dataset.st === 'reject') stopNtfyAlarm("), 'response buttons stop ntfy alarm');
 }
 console.log('ALL TESTS PASSED');
