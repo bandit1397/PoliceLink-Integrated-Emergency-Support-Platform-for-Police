@@ -592,7 +592,11 @@ function recipientAuth_(rtoken) {
  * ntfy 메시지 (브라우저가 그대로 ntfy.sh 에 POST)
  * ==================================================================== */
 
-/** 새 요청 · 재알림: 우선순위 5(긴급) 는 '계속 울리기' 대상 */
+/**
+ * 새 요청 · 재알림: 긴급 · 보통 모두 우선순위 5 ('계속 울리기' 대상).
+ * 안드로이드 알림창은 중요도가 먼저, 같은 중요도 안에서만 최신이 위 → 우선순위가 다르면 예전 긴급이 새 보통보다 위에 남음.
+ * 새 알림이 항상 맨 위에 오도록 같게 함 (2026-11-18, 이전: 보통 = 4). 긴급 구분은 제목 [긴급] · 🚨 태그.
+ */
 function ntfyAlarm_(req, rc, prefix) {
   if (!rc || !rc.topic) return null;
   const t = CONFIG.TYPES[req.type];
@@ -600,7 +604,7 @@ function ntfyAlarm_(req, rc, prefix) {
   return ntfyBody_(rc, req, {
     title: `${prefix}[${req.urgency}] ${t.label} 요청`,
     message: `요청 ${req.requestId}. 누르면 PoliceLink 응답 화면이 열립니다 (응답하면 알람이 멈춤).`,
-    priority: urgent ? 5 : 4,
+    priority: 5,
     tags: urgent ? ['rotating_light', t.tag] : [t.tag],
   });
 }

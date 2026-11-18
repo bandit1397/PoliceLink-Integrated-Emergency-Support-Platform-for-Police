@@ -168,7 +168,10 @@ throws(() => G.closeRequest(disp, id, 'done'), /이미 종료/);
 
 // 통역 요청: 외부 기관이라 detail 안 보임 · 재알림
 const ci = G.createRequest(disp, { type: 'interpreter', urgency: '보통', language: '영어', summary: '가상: 진술 통역', detail: '비밀 내부', targets: interp.map((c) => c.recipientId) });
-assert.strictEqual(ci.ntfy[0].body.priority, 4);
+// 보통도 우선순위 5 (알림창이 중요도 → 시간 순이라, 같게 해야 새 알림이 맨 위). 긴급 표시는 제목 · 태그로만
+assert.strictEqual(ci.ntfy[0].body.priority, 5);
+assert(ci.ntfy[0].body.title.includes('[보통]') && ci.ntfy[0].body.tags.indexOf('rotating_light') < 0, 'normal: no siren tag');
+assert(n0.title.includes('[긴급]') && n0.tags.indexOf('rotating_light') >= 0, 'urgent: siren tag');
 const tA = tok('통역원 A (가상)');
 const vA = G.recipientView(tA);
 assert.strictEqual(vA.items[0].detail, undefined, 'external no detail');
